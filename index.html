@@ -563,6 +563,7 @@
         </div>
     </div>
 
+    <script>
         // ==========================================
         // การตั้งค่าการเชื่อมต่อฐานข้อมูล SUPABASE
         // ==========================================
@@ -788,7 +789,6 @@
             const loadingPanel = document.getElementById('loading');
             if(loadingPanel) loadingPanel.classList.remove('hidden');
 
-            // เพิ่ม Timeout Safety ป้องกันการโหลดค้าง
             const timeoutId = setTimeout(() => {
                 if(loadingPanel) loadingPanel.classList.add('hidden');
                 showToast('การเชื่อมต่อใช้เวลานานผิดปกติ สามารถทดลองใช้งานต่อได้', 'error');
@@ -803,31 +803,31 @@
                 const { data: wData, error: wError } = await supabaseClient.from('withdraw').select('*').order('id', { ascending: true });
                 if (wError) throw wError;
 
-                // แปลงข้อมูลให้เข้ากับระบบเดิม
+                // แปลงข้อมูลให้เข้ากับระบบเดิม โดยจัดการเผื่อกรณีที่ field บางตัวเป็น undefined หรือไม่ได้ถูกสร้างในตาราง
                 dataPurchase = (pData || []).map(d => ({
                     _idx: d.id,
-                    company: String(d.company || '').trim(),
-                    year: String(d.year || '').trim(),
-                    month: String(d.month || '').trim(),
-                    type: String(d.type || '').trim(),
+                    company: d.company ? String(d.company).trim() : '',
+                    year: d.year ? String(d.year).trim() : '',
+                    month: d.month ? String(d.month).trim() : '',
+                    type: d.type ? String(d.type).trim() : '',
                     amount: parseFloat(d.amount) || 0,
-                    dtype: String(d.dtype || '').trim(),
-                    bill_no: String(d.bill_no || '').trim(),
-                    cal_year: String(d.cal_year || '').replace(/,/g, '').split('.')[0].trim()
-                })).filter(r => r.company);
+                    dtype: d.dtype ? String(d.dtype).trim() : '',
+                    bill_no: d.bill_no ? String(d.bill_no).trim() : '',
+                    cal_year: d.cal_year ? String(d.cal_year).replace(/,/g, '').split('.')[0].trim() : ''
+                }));
 
                 dataWithdraw = (wData || []).map(d => ({
                     _idx: d.id,
-                    unit: String(d.unit || '').trim(),
-                    year: String(d.year || '').trim(),
-                    month: String(d.month || '').trim(),
-                    item: String(d.item || '').trim(),
+                    unit: d.unit ? String(d.unit).trim() : '',
+                    year: d.year ? String(d.year).trim() : '',
+                    month: d.month ? String(d.month).trim() : '',
+                    item: d.item ? String(d.item).trim() : '',
                     qty: parseFloat(d.qty) || 0,
                     uprice: parseFloat(d.uprice) || 0,
                     tprice: parseFloat(d.tprice) || 0,
-                    dtype: String(d.dtype || '').trim(),
-                    cal_year: String(d.cal_year || '').replace(/,/g, '').split('.')[0].trim()
-                })).filter(r => r.unit);
+                    dtype: d.dtype ? String(d.dtype).trim() : '',
+                    cal_year: d.cal_year ? String(d.cal_year).replace(/,/g, '').split('.')[0].trim() : ''
+                }));
 
                 populateDropdowns();
 
@@ -844,8 +844,8 @@
                 clearTimeout(timeoutId);
                 console.error(error);
                 
-                // แจ้งเตือนสาเหตุที่แท้จริงเพื่อให้ผู้ใช้ทราบและแก้ไขได้ถูกจุด
-                alert("พบข้อผิดพลาดจากฐานข้อมูล Supabase:\\n" + (error.message || JSON.stringify(error)) + "\\n\\n(กรุณาตรวจสอบว่าสร้าง Table ตามคู่มือครบถ้วนแล้วหรือไม่)");
+                // แจ้งเตือนข้อผิดพลาด
+                alert("พบข้อผิดพลาดจากฐานข้อมูล Supabase:\n" + (error.message || JSON.stringify(error)));
                 showToast('เกิดข้อผิดพลาดในการดึงข้อมูล', 'error');
                 
                 if(loadingPanel) loadingPanel.classList.add('hidden');
