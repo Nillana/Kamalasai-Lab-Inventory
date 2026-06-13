@@ -823,31 +823,56 @@
                     showToast('เชื่อมต่อและดึงข้อมูลจาก Supabase สำเร็จ!');
                 }
 
-                // แปลงข้อมูลให้เข้ากับระบบเดิม โดยจัดการเผื่อกรณีที่ field บางตัวเป็น undefined หรือไม่ได้ถูกสร้างในตาราง
-                dataPurchase = (pData || []).map(d => ({
-                    _idx: d.id,
-                    company: d.company ? String(d.company).trim() : '',
-                    year: d.year ? String(d.year).trim() : '',
-                    month: d.month ? String(d.month).trim() : '',
-                    type: d.type ? String(d.type).trim() : '',
-                    amount: parseFloat(d.amount) || 0,
-                    dtype: d.dtype ? String(d.dtype).trim() : '',
-                    bill_no: d.bill_no ? String(d.bill_no).trim() : '',
-                    cal_year: d.cal_year ? String(d.cal_year).replace(/,/g, '').split('.')[0].trim() : ''
-                }));
+                // ==========================================
+                // รองรับทั้งคอลัมน์แบบไทยและอังกฤษ (กรณี Import CSV โดยตรง)
+                // ==========================================
+                dataPurchase = (pData || []).map(d => {
+                    const company = d.company || d['บริษัท'] || '';
+                    const year = d.year || d['ปีงบประมาณ'] || '';
+                    const month = d.month || d['เดือน'] || '';
+                    const type = d.type || d['ประเภท'] || '';
+                    const amount = d.amount !== undefined ? d.amount : (d['จำนวนเงิน'] !== undefined ? d['จำนวนเงิน'] : 0);
+                    const dtype = d.dtype || d.data_type || d['data_type'] || d['data type'] || '';
+                    const bill_no = d.bill_no || d['bill_no'] || '';
+                    const cal_year = d.cal_year || d['cal_year'] || '';
 
-                dataWithdraw = (wData || []).map(d => ({
-                    _idx: d.id,
-                    unit: d.unit ? String(d.unit).trim() : '',
-                    year: d.year ? String(d.year).trim() : '',
-                    month: d.month ? String(d.month).trim() : '',
-                    item: d.item ? String(d.item).trim() : '',
-                    qty: parseFloat(d.qty) || 0,
-                    uprice: parseFloat(d.uprice) || 0,
-                    tprice: parseFloat(d.tprice) || 0,
-                    dtype: d.dtype ? String(d.dtype).trim() : '',
-                    cal_year: d.cal_year ? String(d.cal_year).replace(/,/g, '').split('.')[0].trim() : ''
-                }));
+                    return {
+                        _idx: d.id,
+                        company: String(company).trim(),
+                        year: String(year).trim(),
+                        month: String(month).trim(),
+                        type: String(type).trim(),
+                        amount: parseFloat(amount) || 0,
+                        dtype: String(dtype).trim(),
+                        bill_no: String(bill_no).trim(),
+                        cal_year: String(cal_year).replace(/,/g, '').split('.')[0].trim()
+                    };
+                });
+
+                dataWithdraw = (wData || []).map(d => {
+                    const unit = d.unit || d['หน่วยงาน'] || '';
+                    const year = d.year || d['ปีงบประมาณ'] || '';
+                    const month = d.month || d['เดือน'] || '';
+                    const item = d.item || d.item_name || d['item_name '] || d['รายการ'] || '';
+                    const qty = d.qty !== undefined ? d.qty : (d['จำนวนที่เบิก'] !== undefined ? d['จำนวนที่เบิก'] : (d['จำนวน'] !== undefined ? d['จำนวน'] : 0));
+                    const uprice = d.uprice !== undefined ? d.uprice : (d['ราคาต่อหน่วย'] !== undefined ? d['ราคาต่อหน่วย'] : 0);
+                    const tprice = d.tprice !== undefined ? d.tprice : (d['ราคารวม'] !== undefined ? d['ราคารวม'] : 0);
+                    const dtype = d.dtype || d.data_type || d['data type'] || d['data_type'] || '';
+                    const cal_year = d.cal_year || d['cal_year'] || '';
+
+                    return {
+                        _idx: d.id,
+                        unit: String(unit).trim(),
+                        year: String(year).trim(),
+                        month: String(month).trim(),
+                        item: String(item).trim(),
+                        qty: parseFloat(qty) || 0,
+                        uprice: parseFloat(uprice) || 0,
+                        tprice: parseFloat(tprice) || 0,
+                        dtype: String(dtype).trim(),
+                        cal_year: String(cal_year).replace(/,/g, '').split('.')[0].trim()
+                    };
+                });
 
                 populateDropdowns();
 
