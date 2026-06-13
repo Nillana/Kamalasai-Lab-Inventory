@@ -807,9 +807,20 @@
                 const { data: wData, error: wError } = await supabaseClient.from('withdraw').select('*').order('id', { ascending: true });
                 if (wError) throw wError;
 
-                // ตรวจสอบว่าโดน RLS บล็อกหรือเป็นตารางว่างหรือไม่
-                if (pData.length === 0 && wData.length === 0) {
-                    showToast('เชื่อมต่อสำเร็จ แต่ไม่พบข้อมูล (ตรวจสอบสิทธิ์ RLS ใน Supabase)', 'error');
+                // ตรวจสอบการดึงข้อมูลแบบแยกวิเคราะห์เพื่อหาข้อผิดพลาดเกี่ยวกับสิทธิ์ RLS รายตาราง
+                let warningMsg = [];
+                if (!pData || pData.length === 0) {
+                    warningMsg.push('ไม่พบข้อมูลจัดซื้อ (ตาราง purchase ว่าง หรือติดสิทธิ์ RLS)');
+                }
+                if (!wData || wData.length === 0) {
+                    warningMsg.push('ไม่พบข้อมูลเบิกจ่าย (ตาราง withdraw ว่าง หรือติดสิทธิ์ RLS)');
+                }
+
+                if (warningMsg.length > 0) {
+                    // หากพบว่าบางตาราง หรือทั้งสองตารางไม่มีแถวข้อมูลส่งกลับมาเลย ให้ขึ้นเตือนนำทาง
+                    showToast(warningMsg.join(' | '), 'error');
+                } else {
+                    showToast('เชื่อมต่อและดึงข้อมูลจาก Supabase สำเร็จ!');
                 }
 
                 // แปลงข้อมูลให้เข้ากับระบบเดิม โดยจัดการเผื่อกรณีที่ field บางตัวเป็น undefined หรือไม่ได้ถูกสร้างในตาราง
@@ -853,9 +864,9 @@
                 clearTimeout(timeoutId);
                 console.error("Supabase Error: ", error);
                 
-                // แจ้งเตือนข้อผิดพลาด
-                alert("พบข้อผิดพลาดจากฐานข้อมูล Supabase:\n" + (error.message || "กรุณาตรวจสอบว่าชื่อ Table ถูกต้องและปิด RLS แล้ว"));
-                showToast('เกิดข้อผิดพลาดในการดึงข้อมูล', 'error');
+                // แจ้งเตือนกรณีโครงสร้างตารางหรือ API Key มีปัญหา
+                alert("พบข้อผิดพลาดจากฐานข้อมูล Supabase:\n" + (error.message || "กรุณาตรวจสอบโครงสร้างตารางหรือ API Key"));
+                showToast('เกิดข้อผิดพลาดในการดึงข้อมูลจาก Server', 'error');
                 
                 if(loadingPanel) loadingPanel.classList.add('hidden');
             }
