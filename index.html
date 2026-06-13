@@ -52,7 +52,7 @@
 </head>
 <body class="flex h-screen overflow-hidden">
 
-    <!-- Login Modal: แก้ไข z-index ให้อยู่บนสุดเสมอ 9999 -->
+    <!-- Login Modal -->
     <div id="login-modal" class="fixed inset-0 bg-gray-900/90 backdrop-blur-sm flex items-center justify-center p-4" style="z-index: 9999;">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-8 relative border border-gray-200">
             <div class="text-center mb-6">
@@ -144,10 +144,10 @@
 
     <main class="flex-1 p-4 md:p-6 overflow-y-auto relative" id="main-content">
         
-        <!-- Loading Spinner: ปรับ z-index ให้อยู่ต่ำกว่า Modal -->
+        <!-- Loading Spinner -->
         <div id="loading" class="absolute inset-0 bg-white/80 backdrop-blur-sm m-4 md:m-6 flex flex-col items-center justify-center rounded-xl border border-gray-200 hidden" style="z-index: 5000;">
             <i class="fas fa-circle-notch fa-spin text-4xl text-blue-600 mb-4"></i>
-            <p class="text-gray-600 font-medium animate-pulse">กำลังดึงข้อมูลจากฐานข้อมูล...</p>
+            <p class="text-gray-600 font-medium animate-pulse" id="loading-text">กำลังดึงข้อมูลจาก Supabase...</p>
         </div>
 
         <!-- ============================================== -->
@@ -787,7 +787,11 @@
         // ==========================================
         async function loadAllData() {
             const loadingPanel = document.getElementById('loading');
-            if(loadingPanel) loadingPanel.classList.remove('hidden');
+            const loadingText = document.getElementById('loading-text');
+            if(loadingPanel) {
+                loadingText.innerText = 'กำลังดึงข้อมูลจาก Supabase...';
+                loadingPanel.classList.remove('hidden');
+            }
 
             const timeoutId = setTimeout(() => {
                 if(loadingPanel) loadingPanel.classList.add('hidden');
@@ -802,6 +806,11 @@
                 // ดึงข้อมูลเบิกจ่าย
                 const { data: wData, error: wError } = await supabaseClient.from('withdraw').select('*').order('id', { ascending: true });
                 if (wError) throw wError;
+
+                // ตรวจสอบว่าโดน RLS บล็อกหรือเป็นตารางว่างหรือไม่
+                if (pData.length === 0 && wData.length === 0) {
+                    showToast('เชื่อมต่อสำเร็จ แต่ไม่พบข้อมูล (ตรวจสอบสิทธิ์ RLS ใน Supabase)', 'error');
+                }
 
                 // แปลงข้อมูลให้เข้ากับระบบเดิม โดยจัดการเผื่อกรณีที่ field บางตัวเป็น undefined หรือไม่ได้ถูกสร้างในตาราง
                 dataPurchase = (pData || []).map(d => ({
@@ -842,10 +851,10 @@
 
             } catch (error) {
                 clearTimeout(timeoutId);
-                console.error(error);
+                console.error("Supabase Error: ", error);
                 
                 // แจ้งเตือนข้อผิดพลาด
-                alert("พบข้อผิดพลาดจากฐานข้อมูล Supabase:\n" + (error.message || JSON.stringify(error)));
+                alert("พบข้อผิดพลาดจากฐานข้อมูล Supabase:\n" + (error.message || "กรุณาตรวจสอบว่าชื่อ Table ถูกต้องและปิด RLS แล้ว"));
                 showToast('เกิดข้อผิดพลาดในการดึงข้อมูล', 'error');
                 
                 if(loadingPanel) loadingPanel.classList.add('hidden');
