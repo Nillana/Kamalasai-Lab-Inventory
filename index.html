@@ -569,7 +569,7 @@
         // ==========================================
         const supabaseUrl = 'https://xgrhympliujnuobsepqb.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhncmh5bXBsaXVqbnVvYnNlcHFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzMDkxMzcsImV4cCI6MjA5Njg4NTEzN30.lha8QKPvYrRVL3Wclp8d1PB3feNeVIyrWxj1KPAxeeE';
-        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+        const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
 
         // ==========================================
         // LOGIN & ACCESS CONTROL
@@ -797,11 +797,11 @@
 
             try {
                 // ดึงข้อมูลจัดซื้อ
-                const { data: pData, error: pError } = await supabase.from('purchase').select('*').order('id', { ascending: true });
+                const { data: pData, error: pError } = await supabaseClient.from('purchase').select('*').order('id', { ascending: true });
                 if (pError) throw pError;
 
                 // ดึงข้อมูลเบิกจ่าย
-                const { data: wData, error: wError } = await supabase.from('withdraw').select('*').order('id', { ascending: true });
+                const { data: wData, error: wError } = await supabaseClient.from('withdraw').select('*').order('id', { ascending: true });
                 if (wError) throw wError;
 
                 // แปลงข้อมูลให้เข้ากับระบบเดิม
@@ -1525,12 +1525,12 @@
             try {
                 if (idx) { 
                     // อัปเดตข้อมูล
-                    const { error } = await supabase.from(tableName).update(rowData).eq('id', idx);
+                    const { error } = await supabaseClient.from(tableName).update(rowData).eq('id', idx);
                     if (error) throw error;
                     showToast('แก้ไขข้อมูลสำเร็จ');
                 } else { 
                     // เพิ่มข้อมูลใหม่
-                    const { error } = await supabase.from(tableName).insert([rowData]);
+                    const { error } = await supabaseClient.from(tableName).insert([rowData]);
                     if (error) throw error;
                     showToast('เพิ่มข้อมูลสำเร็จ');
                 }
@@ -1556,7 +1556,7 @@
             const tableName = deleteTarget.type === 'purchase' ? 'purchase' : 'withdraw';
             
             try {
-                const { error } = await supabase.from(tableName).delete().eq('id', deleteTarget.idx);
+                const { error } = await supabaseClient.from(tableName).delete().eq('id', deleteTarget.idx);
                 if (error) throw error;
                 showToast('ลบข้อมูลสำเร็จ');
                 loadAllData();
