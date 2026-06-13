@@ -52,8 +52,8 @@
 </head>
 <body class="flex h-screen overflow-hidden">
 
-    <!-- Login Modal -->
-    <div id="login-modal" class="fixed inset-0 z-[100] bg-gray-900/90 backdrop-blur-sm flex items-center justify-center p-4">
+    <!-- Login Modal: แก้ไข z-index ให้อยู่บนสุดเสมอ 9999 -->
+    <div id="login-modal" class="fixed inset-0 bg-gray-900/90 backdrop-blur-sm flex items-center justify-center p-4" style="z-index: 9999;">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-8 relative border border-gray-200">
             <div class="text-center mb-6">
                 <div class="w-16 h-16 mx-auto bg-blue-600 rounded-full flex items-center justify-center shadow-md mb-4">
@@ -99,7 +99,7 @@
     </div>
 
     <!-- Toast Notification -->
-    <div id="toast" class="fixed top-5 right-5 z-50 transform transition-all duration-300 translate-x-full opacity-0 glass-panel px-6 py-3 flex items-center gap-3 shadow-lg border-l-4 border-green-500">
+    <div id="toast" class="fixed top-5 right-5 transform transition-all duration-300 translate-x-full opacity-0 glass-panel px-6 py-3 flex items-center gap-3 shadow-lg border-l-4 border-green-500" style="z-index: 10000;">
         <i id="toast-icon" class="fas fa-check-circle text-green-500 text-xl"></i>
         <span id="toast-msg" class="font-medium text-gray-700">ข้อความ</span>
     </div>
@@ -144,10 +144,10 @@
 
     <main class="flex-1 p-4 md:p-6 overflow-y-auto relative" id="main-content">
         
-        <!-- Loading Spinner -->
-        <div id="loading" class="absolute inset-0 z-40 bg-white/80 backdrop-blur-sm m-4 md:m-6 flex flex-col items-center justify-center rounded-xl border border-gray-200 hidden">
+        <!-- Loading Spinner: ปรับ z-index ให้อยู่ต่ำกว่า Modal -->
+        <div id="loading" class="absolute inset-0 bg-white/80 backdrop-blur-sm m-4 md:m-6 flex flex-col items-center justify-center rounded-xl border border-gray-200 hidden" style="z-index: 5000;">
             <i class="fas fa-circle-notch fa-spin text-4xl text-blue-600 mb-4"></i>
-            <p class="text-gray-600 font-medium animate-pulse">กำลังโหลดข้อมูล...</p>
+            <p class="text-gray-600 font-medium animate-pulse">กำลังดึงข้อมูลจากฐานข้อมูล...</p>
         </div>
 
         <!-- ============================================== -->
@@ -453,7 +453,7 @@
                 <h2 class="text-2xl font-bold text-gray-800"><i class="fas fa-cog text-gray-600 mr-2"></i> ตั้งค่าระบบ (ข้อมูลพื้นฐาน)</h2>
             </div>
             <div class="glass-panel p-6 flex-1 overflow-auto">
-                <p class="text-sm text-gray-500 mb-6">ข้อมูลที่เพิ่มในหน้านี้จะถูกนำไปใช้เป็นตัวเลือก (Dropdown) ในหน้าเพิ่มข้อมูล เพื่อความสะดวกและลดข้อผิดพลาดในการพิมพ์</p>
+                <p class="text-sm text-gray-500 mb-6">ข้อมูลที่เพิ่มในหน้านี้จะถูกนำไปใช้เป็นตัวเลือก (Dropdown)ในหน้าเพิ่มข้อมูล เพื่อความสะดวกและลดข้อผิดพลาดในการพิมพ์</p>
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     
                     <!-- Company -->
@@ -789,6 +789,12 @@
             const loadingPanel = document.getElementById('loading');
             if(loadingPanel) loadingPanel.classList.remove('hidden');
 
+            // เพิ่ม Timeout Safety ป้องกันการโหลดค้าง
+            const timeoutId = setTimeout(() => {
+                if(loadingPanel) loadingPanel.classList.add('hidden');
+                showToast('การเชื่อมต่อใช้เวลานานผิดปกติ สามารถทดลองใช้งานต่อได้', 'error');
+            }, 15000);
+
             try {
                 // ดึงข้อมูลจัดซื้อ
                 const { data: pData, error: pError } = await supabase.from('purchase').select('*').order('id', { ascending: true });
@@ -832,10 +838,17 @@
                     switchTab(currentTabId);
                 }
 
+                clearTimeout(timeoutId);
+                if(loadingPanel) loadingPanel.classList.add('hidden');
+
             } catch (error) {
+                clearTimeout(timeoutId);
                 console.error(error);
-                showToast('เกิดข้อผิดพลาดในการดึงข้อมูลจากฐานข้อมูล', 'error');
-            } finally {
+                
+                // แจ้งเตือนสาเหตุที่แท้จริงเพื่อให้ผู้ใช้ทราบและแก้ไขได้ถูกจุด
+                alert("พบข้อผิดพลาดจากฐานข้อมูล Supabase:\\n" + (error.message || JSON.stringify(error)) + "\\n\\n(กรุณาตรวจสอบว่าสร้าง Table ตามคู่มือครบถ้วนแล้วหรือไม่)");
+                showToast('เกิดข้อผิดพลาดในการดึงข้อมูล', 'error');
+                
                 if(loadingPanel) loadingPanel.classList.add('hidden');
             }
         }
@@ -973,12 +986,13 @@
             
             if(type==='success') {
                 icon.className = 'fas fa-check-circle text-green-500 text-xl';
-                t.className = 'fixed top-5 right-5 z-50 transform transition-all duration-300 glass-panel px-6 py-3 flex items-center gap-3 shadow-lg border-l-4 border-green-500';
+                t.className = 'fixed top-5 right-5 transform transition-all duration-300 glass-panel px-6 py-3 flex items-center gap-3 shadow-lg border-l-4 border-green-500';
             } else {
                 icon.className = 'fas fa-exclamation-circle text-red-500 text-xl';
-                t.className = 'fixed top-5 right-5 z-50 transform transition-all duration-300 glass-panel px-6 py-3 flex items-center gap-3 shadow-lg border-l-4 border-red-500';
+                t.className = 'fixed top-5 right-5 transform transition-all duration-300 glass-panel px-6 py-3 flex items-center gap-3 shadow-lg border-l-4 border-red-500';
             }
             
+            t.style.zIndex = '10000';
             t.classList.remove('translate-x-full', 'opacity-0');
             setTimeout(() => t.classList.add('translate-x-full', 'opacity-0'), 3000);
         }
