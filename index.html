@@ -104,65 +104,65 @@
         <span id="toast-msg" class="font-medium text-gray-700">ข้อความ</span>
     </div>
 
-    <!-- Mobile Overlay -->
-    <div id="mobile-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 z-30 hidden md:hidden"></div>
-
     <!-- Sidebar -->
-    <aside id="sidebar" class="w-64 sidebar flex flex-col fixed md:relative z-40 inset-y-0 left-0 transform -translate-x-full md:translate-x-0 transition-transform duration-300 h-full bg-white shadow-2xl md:shadow-sm">
-        <div class="p-6 border-b border-gray-200 text-center bg-blue-600 text-white md:rounded-tr-xl">
-            <div class="w-16 h-16 mx-auto bg-white rounded-full flex items-center justify-center shadow-md mb-3 relative">
+    <aside class="w-64 sidebar flex flex-col hidden md:flex z-20 shadow-sm">
+        <div class="p-6 border-b border-gray-200 text-center bg-blue-600 text-white rounded-tr-xl">
+            <div class="w-16 h-16 mx-auto bg-white rounded-full flex items-center justify-center shadow-md mb-3">
                 <i class="fas fa-hospital text-blue-600 text-2xl"></i>
-                <button onclick="toggleSidebar()" class="md:hidden absolute -right-16 -top-2 text-white text-2xl w-10 h-10 flex items-center justify-center bg-blue-700 rounded-full shadow-lg"><i class="fas fa-times"></i></button>
             </div>
             <h1 class="font-bold text-base leading-tight mt-1">Inventory & Disbursement<br>System</h1>
             <p class="text-xs text-blue-200 mt-2">รพ.กมลาไสย & รพ.สต.</p>
         </div>
         
-        <div class="flex-1 overflow-y-auto py-4 flex flex-col">
-            <div>
-                <p class="px-6 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">ระบบจัดซื้อ</p>
-                <nav class="space-y-1 mb-6">
-                    <a href="#" onclick="switchTab('dash-purchase')" id="nav-dash-purchase" class="nav-item flex items-center px-6 py-3 text-sm transition-colors active"><i class="fas fa-chart-pie w-5 mr-3"></i> แดชบอร์ดจัดซื้อ</a>
-                    <a href="#" onclick="switchTab('manage-purchase')" id="nav-manage-purchase" class="nav-item flex items-center px-6 py-3 text-sm transition-colors"><i class="fas fa-database w-5 mr-3"></i> จัดการข้อมูลจัดซื้อ</a>
-                    <a href="#" onclick="switchTab('report-purchase')" id="nav-report-purchase" class="nav-item flex items-center px-6 py-3 text-sm transition-colors"><i class="fas fa-print w-5 mr-3"></i> รายงานจัดซื้อ</a>
-                </nav>
+        <div class="flex-1 overflow-y-auto py-4">
+            <p class="px-6 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">ระบบจัดซื้อ</p>
+            <nav class="space-y-1 mb-6">
+                <a href="#" onclick="switchTab('dash-purchase')" id="nav-dash-purchase" class="nav-item flex items-center px-6 py-3 text-sm transition-colors active"><i class="fas fa-chart-pie w-5 mr-3"></i> แดชบอร์ดจัดซื้อ</a>
+                <a href="#" onclick="switchTab('manage-purchase')" id="nav-manage-purchase" class="nav-item flex items-center px-6 py-3 text-sm transition-colors"><i class="fas fa-database w-5 mr-3"></i> จัดการข้อมูลจัดซื้อ</a>
+                <a href="#" onclick="switchTab('report-purchase')" id="nav-report-purchase" class="nav-item flex items-center px-6 py-3 text-sm transition-colors"><i class="fas fa-print w-5 mr-3"></i> รายงานจัดซื้อ</a>
+            </nav>
 
-                <p class="px-6 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">ระบบเบิก-จ่าย</p>
+            <p class="px-6 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">ระบบเบิก-จ่าย</p>
+            <nav class="space-y-1">
+                <a href="#" onclick="switchTab('dash-withdraw')" id="nav-dash-withdraw" class="nav-item flex items-center px-6 py-3 text-sm transition-colors"><i class="fas fa-box-open w-5 mr-3"></i> แดชบอร์ดเบิก-จ่าย</a>
+                <a href="#" onclick="switchTab('manage-withdraw')" id="nav-manage-withdraw" class="nav-item flex items-center px-6 py-3 text-sm transition-colors"><i class="fas fa-edit w-5 mr-3"></i> จัดการข้อมูลเบิก-จ่าย</a>
+                <a href="#" onclick="switchTab('report-withdraw')" id="nav-report-withdraw" class="nav-item flex items-center px-6 py-3 text-sm transition-colors"><i class="fas fa-file-invoice w-5 mr-3"></i> รายงานเบิก-จ่าย</a>
+            </nav>
+
+            <div class="admin-only hidden">
+                <p class="px-6 text-xs font-bold text-gray-400 uppercase tracking-wider mt-6 mb-2">การตั้งค่า</p>
                 <nav class="space-y-1">
-                    <a href="#" onclick="switchTab('dash-withdraw')" id="nav-dash-withdraw" class="nav-item flex items-center px-6 py-3 text-sm transition-colors"><i class="fas fa-box-open w-5 mr-3"></i> แดชบอร์ดเบิก-จ่าย</a>
-                    <a href="#" onclick="switchTab('manage-withdraw')" id="nav-manage-withdraw" class="nav-item flex items-center px-6 py-3 text-sm transition-colors"><i class="fas fa-edit w-5 mr-3"></i> จัดการข้อมูลเบิก-จ่าย</a>
-                    <a href="#" onclick="switchTab('report-withdraw')" id="nav-report-withdraw" class="nav-item flex items-center px-6 py-3 text-sm transition-colors"><i class="fas fa-file-invoice w-5 mr-3"></i> รายงานเบิก-จ่าย</a>
+                    <a href="#" onclick="switchTab('settings')" id="nav-settings" class="nav-item flex items-center px-6 py-3 text-sm transition-colors"><i class="fas fa-cog w-5 mr-3"></i> ตั้งค่าระบบ</a>
                 </nav>
-
-                <div class="admin-only hidden">
-                    <p class="px-6 text-xs font-bold text-gray-400 uppercase tracking-wider mt-6 mb-2">การตั้งค่า</p>
-                    <nav class="space-y-1">
-                        <a href="#" onclick="switchTab('settings')" id="nav-settings" class="nav-item flex items-center px-6 py-3 text-sm transition-colors"><i class="fas fa-cog w-5 mr-3"></i> ตั้งค่าระบบ</a>
-                    </nav>
-                </div>
             </div>
             
-            <div class="px-6 mt-auto pt-8 pb-4 shrink-0">
+            <div class="px-6 mt-8">
                 <button onclick="logout()" class="w-full py-2 text-sm text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition flex items-center justify-center gap-2"><i class="fas fa-sign-out-alt"></i> ออกจากระบบ</button>
             </div>
         </div>
     </aside>
 
-    <div class="flex-1 flex flex-col h-screen overflow-hidden relative">
-        <!-- Mobile Header -->
-        <div class="md:hidden flex items-center justify-between bg-blue-600 text-white px-4 py-3 shadow-sm z-20">
-            <div class="flex items-center gap-2">
-                <i class="fas fa-hospital text-lg"></i>
-                <h1 class="font-bold text-md leading-tight">Inventory System</h1>
-            </div>
-            <button onclick="toggleSidebar()" class="text-white hover:text-blue-200 focus:outline-none text-2xl">
-                <i class="fas fa-bars"></i>
-            </button>
+    <main class="flex-1 p-4 md:p-6 overflow-y-auto relative" id="main-content">
+        
+        <!-- Loading Spinner -->
+        <div id="loading" class="absolute inset-0 bg-white/80 backdrop-blur-sm m-4 md:m-6 flex flex-col items-center justify-center rounded-xl border border-gray-200 hidden" style="z-index: 5000;">
+            <i class="fas fa-circle-notch fa-spin text-4xl text-blue-600 mb-4"></i>
+            <p class="text-gray-600 font-medium animate-pulse" id="loading-text">กำลังดึงข้อมูลจาก Supabase...</p>
         </div>
 
-        <main class="flex-1 p-4 md:p-6 overflow-y-auto relative" id="main-content">
-            
-            <!-- Loading Spinner -->
+        <!-- ============================================== -->
+        <!-- TAB: Dashboard จัดซื้อ -->
+        <!-- ============================================== -->
+        <div id="tab-dash-purchase" class="tab-content hidden h-full flex flex-col gap-4">
+            <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center border-b border-gray-300 pb-3 gap-4">
+                <h2 class="text-2xl font-bold text-gray-800"><i class="fas fa-chart-pie text-blue-600 mr-2"></i> ภาพรวมระบบจัดซื้อ</h2>
+                
+                <div class="glass-panel p-3 flex flex-col md:flex-row flex-wrap items-start md:items-center gap-4 text-sm bg-blue-50/50 w-full xl:w-auto">
+                    <div class="flex items-center gap-3 font-medium text-gray-700">
+                        <label class="cursor-pointer flex items-center gap-1"><input type="radio" name="p_filter_type" value="all" checked onchange="togglePurchaseFilter()"> ทั้งหมด</label>
+                        <label class="cursor-pointer flex items-center gap-1"><input type="radio" name="p_filter_type" value="budget" onchange="togglePurchaseFilter()"> ปีงบประมาณ</label>
+                        <label class="cursor-pointer flex items-center gap-1"><input type="radio" name="p_filter_type" value="range" onchange="togglePurchaseFilter()"> ช่วงเดือน/พ.ศ.</label>
+                    </div>
                     
                     <div id="filter-container-budget" class="flex gap-2 items-center hidden">
                         <select id="filter-p-budget" onchange="applyPurchaseFilter()" class="border border-gray-300 rounded px-2 py-1 bg-white"><option value="">-- เลือกปีงบ --</option></select>
@@ -495,8 +495,7 @@
             </div>
         </div>
 
-        </main>
-    </div>
+    </main>
 
     <!-- Datalist for Forms -->
     <datalist id="company-list"></datalist>
@@ -658,13 +657,6 @@
             applyRolePermissions();
         }
 
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('mobile-overlay');
-            sidebar.classList.toggle('-translate-x-full');
-            overlay.classList.toggle('hidden');
-        }
-
         function applyRolePermissions() {
             const btnAddPurchase = document.getElementById('btn-add-purchase');
             const btnAddWithdraw = document.getElementById('btn-add-withdraw');
@@ -806,16 +798,6 @@
             const activeNav = document.getElementById('nav-' + tabId);
             if(activeNav) activeNav.classList.add('active');
 
-            // ปิด Sidebar เมื่อมีการเปลี่ยนแท็บบนมือถือ
-            if(window.innerWidth < 768) {
-                const sidebar = document.getElementById('sidebar');
-                const overlay = document.getElementById('mobile-overlay');
-                if(sidebar && !sidebar.classList.contains('-translate-x-full')) {
-                    sidebar.classList.add('-translate-x-full');
-                    overlay.classList.add('hidden');
-                }
-            }
-
             if(tabId === 'dash-purchase') applyPurchaseFilter(); 
             if(tabId === 'dash-withdraw') applyWithdrawFilter();
             if(tabId === 'manage-purchase') renderTable('purchase');
@@ -856,6 +838,8 @@
 
                     if (warningMsg.length > 0) {
                         showToast(warningMsg.join(' | ') + ' (ตารางว่าง หรือติดสิทธิ์ RLS)', 'error');
+                    } else {
+                        showToast('เชื่อมต่อและดึงข้อมูลจาก Supabase สำเร็จ!');
                     }
                 }
 
