@@ -274,6 +274,7 @@
                 </div>
             </div>
 
+            <!-- แก้ไข Card: ปรับเรียงการ์ดใหม่ และเปลี่ยนการอิงข้อมูลจากชิ้น -> มูลค่าสูงสุด -->
             <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
                 <div class="glass-panel p-4 border-l-4 border-l-blue-500">
                     <p class="text-gray-500 text-xs font-semibold uppercase">จำนวนหน่วยงาน</p>
@@ -283,13 +284,14 @@
                     <p class="text-gray-500 text-xs font-semibold uppercase">มูลค่าเบิกจ่ายรวม</p>
                     <h3 id="stat-w-total" class="text-xl font-bold text-red-600 mt-1 truncate" title="">0 ฿</h3>
                 </div>
-                <div class="glass-panel p-4 border-l-4 border-l-yellow-500">
-                    <p class="text-gray-500 text-xs font-semibold uppercase">จำนวนชิ้นที่เบิกรวม</p>
-                    <h3 id="stat-w-qty" class="text-2xl font-bold text-yellow-600 mt-1">0</h3>
-                </div>
                 <div class="glass-panel p-4 border-l-4 border-l-purple-500">
                     <p class="text-gray-500 text-xs font-semibold uppercase">หน่วยงานเบิกสูงสุด</p>
                     <h3 id="stat-w-topunit" class="text-lg font-bold text-gray-800 mt-1 truncate" title="-">-</h3>
+                </div>
+                <!-- เปลี่ยนจากจำนวนชิ้นที่เบิกรวม เป็น มูลค่าเบิกจ่ายสูงสุด -->
+                <div class="glass-panel p-4 border-l-4 border-l-yellow-500">
+                    <p class="text-gray-500 text-xs font-semibold uppercase">มูลค่าเบิกจ่ายสูงสุด</p>
+                    <h3 id="stat-w-maxvalue" class="text-xl font-bold text-yellow-600 mt-1 truncate" title="">0 ฿</h3>
                 </div>
                 <div class="glass-panel p-4 border-l-4 border-l-emerald-500">
                     <p class="text-gray-500 text-xs font-semibold uppercase">รายการเบิกสูงสุด</p>
@@ -572,10 +574,30 @@
         const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
 
         // ==========================================
-        // LOGIN & ACCESS CONTROL
+        // LOGIN & AUTO LOGOUT
         // ==========================================
         let currentUserRole = null; 
         const ADMIN_PASS = 'admin123'; 
+        
+        let inactivityTimer;
+        const INACTIVITY_TIME_LIMIT = 30 * 60 * 1000; // 30 นาที (หน่วยเป็น ms)
+
+        function resetInactivityTimer() {
+            clearTimeout(inactivityTimer);
+            if (currentUserRole) {
+                inactivityTimer = setTimeout(() => {
+                    logout();
+                    showToast('ออกจากระบบอัตโนมัติเนื่องจากไม่มีการใช้งานเกิน 30 นาที', 'error');
+                }, INACTIVITY_TIME_LIMIT);
+            }
+        }
+
+        // รีเซ็ตเวลาเมื่อมีการขยับเมาส์ เลื่อนจอ หรือกดปุ่ม
+        window.addEventListener('mousemove', resetInactivityTimer);
+        window.addEventListener('keydown', resetInactivityTimer);
+        window.addEventListener('click', resetInactivityTimer);
+        window.addEventListener('scroll', resetInactivityTimer);
+        window.addEventListener('touchstart', resetInactivityTimer);
         
         try {
             currentUserRole = sessionStorage.getItem('userRole');
@@ -619,6 +641,7 @@
         function loginSuccess() {
             document.getElementById('login-modal').classList.add('hidden');
             applyRolePermissions();
+            resetInactivityTimer();
             showToast(`เข้าสู่ระบบในฐานะ ${currentUserRole === 'admin' ? 'ผู้ดูแลระบบ' : 'ผู้ใช้ทั่วไป'}`);
             switchTab('dash-purchase');
         }
@@ -626,6 +649,7 @@
         function logout() {
             try { sessionStorage.removeItem('userRole'); } catch(e){}
             currentUserRole = null;
+            clearTimeout(inactivityTimer);
             document.getElementById('login-password').value = '';
             document.querySelector('input[name="login_role"][value="user"]').checked = true;
             togglePasswordInput();
@@ -757,12 +781,13 @@
             if (currentUserRole) {
                 document.getElementById('login-modal').classList.add('hidden');
                 applyRolePermissions();
+                resetInactivityTimer();
             } else {
                 document.getElementById('login-modal').classList.remove('hidden');
             }
             
             switchTab('dash-purchase');
-            loadAllData();
+            loadAllData(false); // โหลดครั้งแรกให้แสดง Toast
         };
 
         function switchTab(tabId) {
@@ -785,7 +810,8 @@
         // ==========================================
         // DATABASE FUNCTIONS (SUPABASE)
         // ==========================================
-        async function loadAllData() {
+        // เพิ่มตัวแปร silent เพื่อควบคุมไม่ให้ Toast ทำงานซ้ำซ้อนตอนบันทึก
+        async function loadAllData(silent = false) {
             const loadingPanel = document.getElementById('loading');
             const loadingText = document.getElementById('loading-text');
             if(loadingPanel) {
@@ -795,36 +821,30 @@
 
             const timeoutId = setTimeout(() => {
                 if(loadingPanel) loadingPanel.classList.add('hidden');
-                showToast('การเชื่อมต่อใช้เวลานานผิดปกติ สามารถทดลองใช้งานต่อได้', 'error');
+                if(!silent) showToast('การเชื่อมต่อใช้เวลานานผิดปกติ สามารถทดลองใช้งานต่อได้', 'error');
             }, 15000);
 
             try {
-                // ดึงข้อมูลจัดซื้อ
                 const { data: pData, error: pError } = await supabaseClient.from('purchase').select('*').order('id', { ascending: true });
                 if (pError) throw pError;
 
-                // ดึงข้อมูลเบิกจ่าย
                 const { data: wData, error: wError } = await supabaseClient.from('withdraw').select('*').order('id', { ascending: true });
                 if (wError) throw wError;
 
-                // ตรวจสอบการดึงข้อมูลแบบแยกวิเคราะห์เพื่อหาข้อผิดพลาดเกี่ยวกับสิทธิ์ RLS รายตาราง
-                let warningMsg = [];
-                if (!pData || pData.length === 0) {
-                    warningMsg.push('ไม่พบข้อมูลจัดซื้อ (ตาราง purchase ว่าง หรือติดสิทธิ์ RLS)');
-                }
-                if (!wData || wData.length === 0) {
-                    warningMsg.push('ไม่พบข้อมูลเบิกจ่าย (ตาราง withdraw ว่าง หรือติดสิทธิ์ RLS)');
-                }
+                if (!silent) {
+                    let warningMsg = [];
+                    if (!pData || pData.length === 0) warningMsg.push('ไม่พบข้อมูลจัดซื้อ');
+                    if (!wData || wData.length === 0) warningMsg.push('ไม่พบข้อมูลเบิกจ่าย');
 
-                if (warningMsg.length > 0) {
-                    // หากพบว่าบางตาราง หรือทั้งสองตารางไม่มีแถวข้อมูลส่งกลับมาเลย ให้ขึ้นเตือนนำทาง
-                    showToast(warningMsg.join(' | '), 'error');
-                } else {
-                    showToast('เชื่อมต่อและดึงข้อมูลจาก Supabase สำเร็จ!');
+                    if (warningMsg.length > 0) {
+                        showToast(warningMsg.join(' | ') + ' (ตารางว่าง หรือติดสิทธิ์ RLS)', 'error');
+                    } else {
+                        showToast('เชื่อมต่อและดึงข้อมูลจาก Supabase สำเร็จ!');
+                    }
                 }
 
                 // ==========================================
-                // รองรับทั้งคอลัมน์แบบไทยและอังกฤษ (กรณี Import CSV โดยตรง)
+                // รองรับทั้งคอลัมน์แบบไทยและอังกฤษ
                 // ==========================================
                 dataPurchase = (pData || []).map(d => {
                     const company = d.company || d['บริษัท'] || '';
@@ -888,11 +908,10 @@
             } catch (error) {
                 clearTimeout(timeoutId);
                 console.error("Supabase Error: ", error);
-                
-                // แจ้งเตือนกรณีโครงสร้างตารางหรือ API Key มีปัญหา
-                alert("พบข้อผิดพลาดจากฐานข้อมูล Supabase:\n" + (error.message || "กรุณาตรวจสอบโครงสร้างตารางหรือ API Key"));
-                showToast('เกิดข้อผิดพลาดในการดึงข้อมูลจาก Server', 'error');
-                
+                if(!silent) {
+                    alert("พบข้อผิดพลาดจากฐานข้อมูล Supabase:\n" + (error.message || "กรุณาตรวจสอบโครงสร้างตารางหรือ API Key"));
+                    showToast('เกิดข้อผิดพลาดในการดึงข้อมูลจาก Server', 'error');
+                }
                 if(loadingPanel) loadingPanel.classList.add('hidden');
             }
         }
@@ -1090,7 +1109,6 @@
                 }
             }
 
-            // นำตัวกรองกราฟที่เลือก (บริษัท, ประเภท) มากรองข้อมูลเพิ่มเติม
             const selCompElement = document.getElementById('p_chart_comp');
             const selTypeElement = document.getElementById('p_chart_type');
             const selComp = selCompElement ? selCompElement.value : 'all';
@@ -1282,26 +1300,22 @@
         function renderDashboardWithdraw(dataObj, selUnit = 'all', selItem = 'all') {
             const unitsCount = [...new Set(dataObj.map(d=>d.unit))].length;
             const totalVal = dataObj.reduce((sum, d)=>sum+d.tprice, 0);
-            const totalQty = dataObj.reduce((sum, d)=>sum+d.qty, 0);
             
             const unitTotals = {};
-            const itemQtyTotals = {};
             const itemValueTotals = {};
 
             dataObj.forEach(d => {
                 unitTotals[d.unit] = (unitTotals[d.unit]||0) + d.tprice;
-                itemQtyTotals[d.item] = (itemQtyTotals[d.item]||0) + d.qty;
                 itemValueTotals[d.item] = (itemValueTotals[d.item]||0) + d.tprice;
             });
 
             document.getElementById('stat-w-units').innerText = fmtQty(unitsCount);
             document.getElementById('stat-w-total').innerText = fmtMoney(totalVal) + ' ฿';
-            document.getElementById('stat-w-qty').innerText = fmtQty(totalQty);
 
             const sortedUnits = Object.entries(unitTotals).sort((a,b)=>b[1]-a[1]);
-            const sortedItemsQty = Object.entries(itemQtyTotals).sort((a,b)=>b[1]-a[1]);
             const sortedItemsByVal = Object.entries(itemValueTotals).sort((a,b)=>b[1]-a[1]); 
 
+            // อัปเดตข้อมูลหน่วยงานที่เบิกมูลค่าสูงสุด
             if(sortedUnits.length > 0) {
                 document.getElementById('stat-w-topunit').innerText = sortedUnits[0][0];
                 document.getElementById('stat-w-topunit').title = sortedUnits[0][0] + ` (${fmtMoney(sortedUnits[0][1])} ฿)`;
@@ -1309,10 +1323,17 @@
                 document.getElementById('stat-w-topunit').innerText = "-";
             }
 
-            if(sortedItemsQty.length > 0) {
-                document.getElementById('stat-w-topitem').innerText = sortedItemsQty[0][0];
-                document.getElementById('stat-w-topitem').title = sortedItemsQty[0][0] + ` (${fmtQty(sortedItemsQty[0][1])} ชิ้น)`;
+            // อัปเดตข้อมูลรายการเบิก และ มูลค่าเบิกจ่ายสูงสุด โดยอิงจาก tprice (มูลค่าเงิน)
+            if(sortedItemsByVal.length > 0) {
+                // มูลค่าเบิกจ่ายสูงสุด (Card ตัวที่ 4)
+                document.getElementById('stat-w-maxvalue').innerText = fmtMoney(sortedItemsByVal[0][1]) + ' ฿';
+                document.getElementById('stat-w-maxvalue').title = sortedItemsByVal[0][0] + ` (${fmtMoney(sortedItemsByVal[0][1])} ฿)`;
+                
+                // รายการเบิกสูงสุด (Card ตัวที่ 5)
+                document.getElementById('stat-w-topitem').innerText = sortedItemsByVal[0][0];
+                document.getElementById('stat-w-topitem').title = sortedItemsByVal[0][0] + ` (${fmtMoney(sortedItemsByVal[0][1])} ฿)`;
             } else {
+                document.getElementById('stat-w-maxvalue').innerText = "0 ฿";
                 document.getElementById('stat-w-topitem').innerText = "-";
             }
 
@@ -1568,17 +1589,16 @@
 
             try {
                 if (idx) { 
-                    // อัปเดตข้อมูล
                     const { error } = await supabaseClient.from(tableName).update(rowData).eq('id', idx);
                     if (error) throw error;
-                    showToast('แก้ไขข้อมูลสำเร็จ');
+                    showToast('บันทึกข้อมูลสำเร็จ');
                 } else { 
-                    // เพิ่มข้อมูลใหม่
                     const { error } = await supabaseClient.from(tableName).insert([rowData]);
                     if (error) throw error;
-                    showToast('เพิ่มข้อมูลสำเร็จ');
+                    showToast('บันทึกข้อมูลสำเร็จ');
                 }
-                loadAllData();
+                // ส่งค่า true ไปเพื่อระงับ Toast "เชื่อมต่อสำเร็จ..." ที่จะมาทับซ้อนข้อความ "บันทึกข้อมูลสำเร็จ"
+                loadAllData(true);
             } catch (error) {
                 console.error(error);
                 showToast('เกิดข้อผิดพลาดในการบันทึกข้อมูล', 'error');
@@ -1603,7 +1623,7 @@
                 const { error } = await supabaseClient.from(tableName).delete().eq('id', deleteTarget.idx);
                 if (error) throw error;
                 showToast('ลบข้อมูลสำเร็จ');
-                loadAllData();
+                loadAllData(true); // ปิดเสียงเตือนซ้ำเหมือนกัน
             } catch (error) {
                 console.error(error);
                 showToast('เกิดข้อผิดพลาดในการลบข้อมูล', 'error');
