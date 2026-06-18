@@ -2,34 +2,29 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8"/>
-    <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
     <title>Inventory & Disbursement System</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet"/>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- เพิ่ม Supabase Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
         * { font-family: 'Sarabun', sans-serif; }
-        body { background-color: #f3f4f6; color: #1f2937; min-height: 100vh; }
+        body { background-color: #f3f4f6; color: #1f2937; }
         .glass-panel { background: #ffffff; border: 1px solid #e5e7eb; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); border-radius: 0.75rem; }
-        .sidebar { background: #ffffff; border-right: 1px solid #e5e7eb; }
         .nav-item.active { background: #eff6ff; border-left: 4px solid #2563eb; color: #1d4ed8; font-weight: 600; }
         .nav-item { color: #4b5563; }
         .nav-item:hover { background: #f9fafb; color: #111827; }
         thead { background-color: #f8fafc; color: #475569; }
         tr { border-bottom: 1px solid #f1f5f9; }
         tr:hover { background-color: #f8fafc; }
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #f1f5f9; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         
-        /* ============================================== */
-        /* CSS สำหรับการพิมพ์รายงานให้เป็นระเบียบ (ไม่ต้องใช้ Popup) */
-        /* ============================================== */
         @media print {
             body > *:not(#print-area) { display: none !important; }
             #print-area { display: block !important; width: 100%; }
@@ -50,7 +45,7 @@
         }
     </style>
 </head>
-<body class="flex h-screen overflow-hidden">
+<body class="flex h-screen overflow-hidden bg-gray-100">
 
     <!-- Login Modal -->
     <div id="login-modal" class="fixed inset-0 bg-gray-900/90 backdrop-blur-sm flex items-center justify-center p-4" style="z-index: 9999;">
@@ -104,398 +99,417 @@
         <span id="toast-msg" class="font-medium text-gray-700">ข้อความ</span>
     </div>
 
-    <!-- Sidebar -->
-    <aside class="w-64 sidebar flex flex-col hidden md:flex z-20 shadow-sm">
-        <div class="p-6 border-b border-gray-200 text-center bg-blue-600 text-white rounded-tr-xl">
-            <div class="w-16 h-16 mx-auto bg-white rounded-full flex items-center justify-center shadow-md mb-3">
+    <!-- Mobile Overlay -->
+    <div id="mobile-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 z-30 hidden md:hidden transition-opacity"></div>
+
+    <!-- Sidebar Layout -->
+    <aside id="sidebar" class="w-64 flex-shrink-0 bg-white flex flex-col fixed md:relative z-40 inset-y-0 left-0 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out border-r border-gray-200 h-full shadow-2xl md:shadow-none">
+        <div class="p-6 border-b border-gray-200 text-center bg-blue-600 text-white shrink-0">
+            <div class="w-16 h-16 mx-auto bg-white rounded-full flex items-center justify-center shadow-md mb-3 relative">
                 <i class="fas fa-hospital text-blue-600 text-2xl"></i>
             </div>
             <h1 class="font-bold text-base leading-tight mt-1">Inventory & Disbursement<br>System</h1>
             <p class="text-xs text-blue-200 mt-2">รพ.กมลาไสย & รพ.สต.</p>
         </div>
         
-        <div class="flex-1 overflow-y-auto py-4">
-            <p class="px-6 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">ระบบจัดซื้อ</p>
-            <nav class="space-y-1 mb-6">
-                <a href="#" onclick="switchTab('dash-purchase')" id="nav-dash-purchase" class="nav-item flex items-center px-6 py-3 text-sm transition-colors active"><i class="fas fa-chart-pie w-5 mr-3"></i> แดชบอร์ดจัดซื้อ</a>
-                <a href="#" onclick="switchTab('manage-purchase')" id="nav-manage-purchase" class="nav-item flex items-center px-6 py-3 text-sm transition-colors"><i class="fas fa-database w-5 mr-3"></i> จัดการข้อมูลจัดซื้อ</a>
-                <a href="#" onclick="switchTab('report-purchase')" id="nav-report-purchase" class="nav-item flex items-center px-6 py-3 text-sm transition-colors"><i class="fas fa-print w-5 mr-3"></i> รายงานจัดซื้อ</a>
-            </nav>
-
-            <p class="px-6 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">ระบบเบิก-จ่าย</p>
-            <nav class="space-y-1">
-                <a href="#" onclick="switchTab('dash-withdraw')" id="nav-dash-withdraw" class="nav-item flex items-center px-6 py-3 text-sm transition-colors"><i class="fas fa-box-open w-5 mr-3"></i> แดชบอร์ดเบิก-จ่าย</a>
-                <a href="#" onclick="switchTab('manage-withdraw')" id="nav-manage-withdraw" class="nav-item flex items-center px-6 py-3 text-sm transition-colors"><i class="fas fa-edit w-5 mr-3"></i> จัดการข้อมูลเบิก-จ่าย</a>
-                <a href="#" onclick="switchTab('report-withdraw')" id="nav-report-withdraw" class="nav-item flex items-center px-6 py-3 text-sm transition-colors"><i class="fas fa-file-invoice w-5 mr-3"></i> รายงานเบิก-จ่าย</a>
-            </nav>
-
-            <div class="admin-only hidden">
-                <p class="px-6 text-xs font-bold text-gray-400 uppercase tracking-wider mt-6 mb-2">การตั้งค่า</p>
-                <nav class="space-y-1">
-                    <a href="#" onclick="switchTab('settings')" id="nav-settings" class="nav-item flex items-center px-6 py-3 text-sm transition-colors"><i class="fas fa-cog w-5 mr-3"></i> ตั้งค่าระบบ</a>
+        <div class="flex-1 overflow-y-auto py-4 flex flex-col">
+            <div>
+                <p class="px-6 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">ระบบจัดซื้อ</p>
+                <nav class="space-y-1 mb-6">
+                    <a href="#" onclick="switchTab('dash-purchase')" id="nav-dash-purchase" class="nav-item flex items-center px-6 py-3 text-sm transition-colors active"><i class="fas fa-chart-pie w-5 mr-3"></i> แดชบอร์ดจัดซื้อ</a>
+                    <a href="#" onclick="switchTab('manage-purchase')" id="nav-manage-purchase" class="nav-item flex items-center px-6 py-3 text-sm transition-colors"><i class="fas fa-database w-5 mr-3"></i> จัดการข้อมูลจัดซื้อ</a>
+                    <a href="#" onclick="switchTab('report-purchase')" id="nav-report-purchase" class="nav-item flex items-center px-6 py-3 text-sm transition-colors"><i class="fas fa-print w-5 mr-3"></i> รายงานจัดซื้อ</a>
                 </nav>
+
+                <p class="px-6 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">ระบบเบิก-จ่าย</p>
+                <nav class="space-y-1">
+                    <a href="#" onclick="switchTab('dash-withdraw')" id="nav-dash-withdraw" class="nav-item flex items-center px-6 py-3 text-sm transition-colors"><i class="fas fa-box-open w-5 mr-3"></i> แดชบอร์ดเบิก-จ่าย</a>
+                    <a href="#" onclick="switchTab('manage-withdraw')" id="nav-manage-withdraw" class="nav-item flex items-center px-6 py-3 text-sm transition-colors"><i class="fas fa-edit w-5 mr-3"></i> จัดการข้อมูลเบิก-จ่าย</a>
+                    <a href="#" onclick="switchTab('report-withdraw')" id="nav-report-withdraw" class="nav-item flex items-center px-6 py-3 text-sm transition-colors"><i class="fas fa-file-invoice w-5 mr-3"></i> รายงานเบิก-จ่าย</a>
+                </nav>
+
+                <div class="admin-only hidden">
+                    <p class="px-6 text-xs font-bold text-gray-400 uppercase tracking-wider mt-6 mb-2">การตั้งค่า</p>
+                    <nav class="space-y-1">
+                        <a href="#" onclick="switchTab('settings')" id="nav-settings" class="nav-item flex items-center px-6 py-3 text-sm transition-colors"><i class="fas fa-cog w-5 mr-3"></i> ตั้งค่าระบบ</a>
+                    </nav>
+                </div>
             </div>
             
-            <div class="px-6 mt-8">
+            <div class="px-6 mt-auto pt-8 pb-4 shrink-0">
                 <button onclick="logout()" class="w-full py-2 text-sm text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition flex items-center justify-center gap-2"><i class="fas fa-sign-out-alt"></i> ออกจากระบบ</button>
             </div>
         </div>
     </aside>
 
-    <main class="flex-1 p-4 md:p-6 overflow-y-auto relative" id="main-content">
+    <!-- Main Content Wrapper -->
+    <div class="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
         
-        <!-- Loading Spinner -->
-        <div id="loading" class="absolute inset-0 bg-white/80 backdrop-blur-sm m-4 md:m-6 flex flex-col items-center justify-center rounded-xl border border-gray-200 hidden" style="z-index: 5000;">
-            <i class="fas fa-circle-notch fa-spin text-4xl text-blue-600 mb-4"></i>
-            <p class="text-gray-600 font-medium animate-pulse" id="loading-text">กำลังดึงข้อมูลจาก Supabase...</p>
-        </div>
+        <!-- Mobile Header -->
+        <header class="md:hidden flex items-center justify-between bg-blue-600 text-white px-4 py-3 shadow-md z-20 shrink-0">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-hospital text-lg"></i>
+                <h1 class="font-bold text-md leading-tight">Inventory System</h1>
+            </div>
+            <button onclick="toggleSidebar()" class="text-white hover:text-blue-200 focus:outline-none text-2xl w-10 h-10 flex items-center justify-center">
+                <i class="fas fa-bars"></i>
+            </button>
+        </header>
 
-        <!-- ============================================== -->
-        <!-- TAB: Dashboard จัดซื้อ -->
-        <!-- ============================================== -->
-        <div id="tab-dash-purchase" class="tab-content hidden h-full flex flex-col gap-4">
-            <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center border-b border-gray-300 pb-3 gap-4">
-                <h2 class="text-2xl font-bold text-gray-800"><i class="fas fa-chart-pie text-blue-600 mr-2"></i> ภาพรวมระบบจัดซื้อ</h2>
-                
-                <div class="glass-panel p-3 flex flex-col md:flex-row flex-wrap items-start md:items-center gap-4 text-sm bg-blue-50/50 w-full xl:w-auto">
-                    <div class="flex items-center gap-3 font-medium text-gray-700">
-                        <label class="cursor-pointer flex items-center gap-1"><input type="radio" name="p_filter_type" value="all" checked onchange="togglePurchaseFilter()"> ทั้งหมด</label>
-                        <label class="cursor-pointer flex items-center gap-1"><input type="radio" name="p_filter_type" value="budget" onchange="togglePurchaseFilter()"> ปีงบประมาณ</label>
-                        <label class="cursor-pointer flex items-center gap-1"><input type="radio" name="p_filter_type" value="range" onchange="togglePurchaseFilter()"> ช่วงเดือน/พ.ศ.</label>
-                    </div>
+        <!-- Scrollable Content Area -->
+        <main class="flex-1 p-4 md:p-6 overflow-y-auto relative" id="main-content">
+            
+            <!-- Loading Spinner -->
+            <div id="loading" class="absolute inset-0 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center z-50 hidden">
+                <i class="fas fa-circle-notch fa-spin text-4xl text-blue-600 mb-4"></i>
+                <p class="text-gray-600 font-medium animate-pulse" id="loading-text">กำลังดึงข้อมูลจาก Supabase...</p>
+            </div>
+
+            <!-- ============================================== -->
+            <!-- TAB: Dashboard จัดซื้อ -->
+            <!-- ============================================== -->
+            <div id="tab-dash-purchase" class="tab-content hidden flex flex-col gap-4">
+                <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center border-b border-gray-300 pb-3 gap-4">
+                    <h2 class="text-2xl font-bold text-gray-800"><i class="fas fa-chart-pie text-blue-600 mr-2"></i> ภาพรวมระบบจัดซื้อ</h2>
                     
-                    <div id="filter-container-budget" class="flex gap-2 items-center hidden">
-                        <select id="filter-p-budget" onchange="applyPurchaseFilter()" class="border border-gray-300 rounded px-2 py-1 bg-white"><option value="">-- เลือกปีงบ --</option></select>
-                    </div>
-
-                    <div id="filter-container-range" class="flex gap-2 items-center hidden flex-wrap">
-                        <span class="text-gray-500">ตั้งแต่:</span>
-                        <select id="filter-p-m-from" onchange="applyPurchaseFilter()" class="border border-gray-300 rounded px-2 py-1 bg-white"></select>
-                        <select id="filter-p-y-from" onchange="applyPurchaseFilter()" class="border border-gray-300 rounded px-2 py-1 bg-white"></select>
-                        <span class="text-gray-500 ml-2">ถึง:</span>
-                        <select id="filter-p-m-to" onchange="applyPurchaseFilter()" class="border border-gray-300 rounded px-2 py-1 bg-white"></select>
-                        <select id="filter-p-y-to" onchange="applyPurchaseFilter()" class="border border-gray-300 rounded px-2 py-1 bg-white"></select>
-                    </div>
-                </div>
-            </div>
-
-            <div class="flex justify-end">
-                <div class="glass-panel px-4 py-2 inline-flex items-center gap-4 text-sm bg-white shadow-sm flex-wrap">
-                    <span class="font-bold text-gray-700"><i class="fas fa-filter text-blue-500 mr-1"></i> ตัวกรองกราฟสัดส่วน:</span>
-                    <select id="p_chart_comp" onchange="applyPurchaseFilter()" class="border border-gray-300 rounded px-2 py-1 text-gray-700 focus:outline-none focus:border-blue-500 max-w-[200px] truncate">
-                        <option value="all">-- ทุกบริษัท --</option>
-                    </select>
-                    <select id="p_chart_type" onchange="applyPurchaseFilter()" class="border border-gray-300 rounded px-2 py-1 text-gray-700 focus:outline-none focus:border-blue-500">
-                        <option value="all">-- ทุกประเภทจัดซื้อ --</option>
-                        <option value="เจาะจง">เจาะจง</option>
-                        <option value="สนับสนุน">สนับสนุน</option>
-                        <option value="E-bid">E-bid</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
-                <div class="glass-panel p-4 border-l-4 border-l-blue-500">
-                    <p class="text-gray-500 text-xs font-semibold uppercase">จำนวนบริษัท</p>
-                    <h3 id="stat-p-companies" class="text-2xl font-bold text-gray-800 mt-1">0</h3>
-                </div>
-                <div class="glass-panel p-4 border-l-4 border-l-green-500">
-                    <p class="text-gray-500 text-xs font-semibold uppercase">มูลค่าจัดซื้อรวม</p>
-                    <h3 id="stat-p-total" class="text-xl font-bold text-green-600 mt-1 truncate" title="">0 ฿</h3>
-                </div>
-                <div class="glass-panel p-4 border-l-4 border-l-orange-500">
-                    <p class="text-gray-500 text-xs font-semibold uppercase">บริษัทจัดซื้อสูงสุด</p>
-                    <h3 id="stat-p-topcomp" class="text-lg font-bold text-gray-800 mt-1 truncate" title="-">-</h3>
-                </div>
-                <div class="glass-panel p-4 border-l-4 border-l-blue-400 bg-blue-50/50">
-                    <p class="text-gray-500 text-xs font-semibold uppercase">ประเภท: เจาะจง</p>
-                    <h3 id="stat-p-specific" class="text-lg font-bold text-blue-700 mt-1 truncate" title="">0 ฿</h3>
-                </div>
-                <div class="glass-panel p-4 border-l-4 border-l-emerald-400 bg-emerald-50/50">
-                    <p class="text-gray-500 text-xs font-semibold uppercase">ประเภท: สนับสนุน</p>
-                    <h3 id="stat-p-support" class="text-lg font-bold text-emerald-700 mt-1 truncate" title="">0 ฿</h3>
-                </div>
-                <div class="glass-panel p-4 border-l-4 border-l-amber-400 bg-amber-50/50">
-                    <p class="text-gray-500 text-xs font-semibold uppercase">ประเภท: E-bid</p>
-                    <h3 id="stat-p-ebid" class="text-lg font-bold text-amber-700 mt-1 truncate" title="">0 ฿</h3>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-[350px]">
-                <div class="glass-panel p-4 flex flex-col">
-                    <h3 class="font-bold text-gray-700 mb-4 text-center" id="chart-title-p-1">มูลค่าจัดซื้อเปรียบเทียบทุกบริษัท</h3>
-                    <div class="flex-1 relative w-full"><canvas id="chartPurchaseBar"></canvas></div>
-                </div>
-                <div class="glass-panel p-4 flex flex-col">
-                    <h3 class="font-bold text-gray-700 mb-4 text-center" id="titleChartStacked">สัดส่วนต่อบริษัท (ตามประเภทจัดซื้อ)</h3>
-                    <div class="flex-1 relative w-full"><canvas id="chartPurchaseTypeBar"></canvas></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ============================================== -->
-        <!-- TAB: Dashboard เบิก-จ่าย -->
-        <!-- ============================================== -->
-        <div id="tab-dash-withdraw" class="tab-content hidden h-full flex flex-col gap-4">
-            <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center border-b border-gray-300 pb-3 gap-4">
-                <h2 class="text-2xl font-bold text-gray-800"><i class="fas fa-box-open text-purple-600 mr-2"></i> ภาพรวมระบบเบิก-จ่าย</h2>
-                
-                <div class="glass-panel p-3 flex flex-col md:flex-row flex-wrap items-start md:items-center gap-4 text-sm bg-purple-50/50 w-full xl:w-auto">
-                    <div class="flex items-center gap-3 font-medium text-gray-700">
-                        <label class="cursor-pointer flex items-center gap-1"><input type="radio" name="w_filter_type" value="all" checked onchange="toggleWithdrawFilter()"> ทั้งหมด</label>
-                        <label class="cursor-pointer flex items-center gap-1"><input type="radio" name="w_filter_type" value="budget" onchange="toggleWithdrawFilter()"> ปีงบประมาณ</label>
-                        <label class="cursor-pointer flex items-center gap-1"><input type="radio" name="w_filter_type" value="range" onchange="toggleWithdrawFilter()"> ช่วงเดือน/พ.ศ.</label>
-                    </div>
-                    
-                    <div id="filter-container-w-budget" class="flex gap-2 items-center hidden">
-                        <select id="filter-w-budget" onchange="applyWithdrawFilter()" class="border border-gray-300 rounded px-2 py-1 bg-white"><option value="">-- เลือกปีงบ --</option></select>
-                    </div>
-
-                    <div id="filter-container-w-range" class="flex gap-2 items-center hidden flex-wrap">
-                        <span class="text-gray-500">ตั้งแต่:</span>
-                        <select id="filter-w-m-from" onchange="applyWithdrawFilter()" class="border border-gray-300 rounded px-2 py-1 bg-white"></select>
-                        <select id="filter-w-y-from" onchange="applyWithdrawFilter()" class="border border-gray-300 rounded px-2 py-1 bg-white"></select>
-                        <span class="text-gray-500 ml-2">ถึง:</span>
-                        <select id="filter-w-m-to" onchange="applyWithdrawFilter()" class="border border-gray-300 rounded px-2 py-1 bg-white"></select>
-                        <select id="filter-w-y-to" onchange="applyWithdrawFilter()" class="border border-gray-300 rounded px-2 py-1 bg-white"></select>
-                    </div>
-                </div>
-            </div>
-
-            <div class="flex justify-end">
-                <div class="glass-panel px-4 py-2 inline-flex items-center gap-4 text-sm bg-white shadow-sm flex-wrap">
-                    <span class="font-bold text-gray-700"><i class="fas fa-filter text-purple-500 mr-1"></i> ตัวกรองกราฟสัดส่วน:</span>
-                    <select id="w_chart_unit" onchange="applyWithdrawFilter()" class="border border-gray-300 rounded px-2 py-1 text-gray-700 focus:outline-none focus:border-purple-500">
-                        <option value="all">-- ทุก รพ.สต. --</option>
-                    </select>
-                    <select id="w_chart_item" onchange="applyWithdrawFilter()" class="border border-gray-300 rounded px-2 py-1 text-gray-700 focus:outline-none focus:border-purple-500 max-w-[200px] truncate">
-                        <option value="all">-- ทุกรายการอุปกรณ์ --</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- แก้ไข Card: ปรับเรียงการ์ดใหม่ และเปลี่ยนการอิงข้อมูลจากชิ้น -> มูลค่าสูงสุด -->
-            <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
-                <div class="glass-panel p-4 border-l-4 border-l-blue-500">
-                    <p class="text-gray-500 text-xs font-semibold uppercase">จำนวนหน่วยงาน</p>
-                    <h3 id="stat-w-units" class="text-2xl font-bold text-gray-800 mt-1">0</h3>
-                </div>
-                <div class="glass-panel p-4 border-l-4 border-l-red-500">
-                    <p class="text-gray-500 text-xs font-semibold uppercase">มูลค่าเบิกจ่ายรวม</p>
-                    <h3 id="stat-w-total" class="text-xl font-bold text-red-600 mt-1 truncate" title="">0 ฿</h3>
-                </div>
-                <div class="glass-panel p-4 border-l-4 border-l-purple-500">
-                    <p class="text-gray-500 text-xs font-semibold uppercase">หน่วยงานเบิกสูงสุด</p>
-                    <h3 id="stat-w-topunit" class="text-lg font-bold text-gray-800 mt-1 truncate" title="-">-</h3>
-                </div>
-                <!-- เปลี่ยนจากจำนวนชิ้นที่เบิกรวม เป็น มูลค่าเบิกจ่ายสูงสุด -->
-                <div class="glass-panel p-4 border-l-4 border-l-yellow-500">
-                    <p class="text-gray-500 text-xs font-semibold uppercase">มูลค่าเบิกจ่ายสูงสุด</p>
-                    <h3 id="stat-w-maxvalue" class="text-xl font-bold text-yellow-600 mt-1 truncate" title="">0 ฿</h3>
-                </div>
-                <div class="glass-panel p-4 border-l-4 border-l-emerald-500">
-                    <p class="text-gray-500 text-xs font-semibold uppercase">รายการเบิกสูงสุด</p>
-                    <h3 id="stat-w-topitem" class="text-sm font-bold text-gray-800 mt-1 truncate" title="-">-</h3>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-[350px]">
-                <div class="glass-panel p-4 flex flex-col">
-                    <h3 class="font-bold text-gray-700 mb-4 text-center" id="chart-title-w-1">มูลค่าเบิกจ่ายเปรียบเทียบทุก รพ.สต.</h3>
-                    <div class="flex-1 relative w-full"><canvas id="chartWithdrawBar"></canvas></div>
-                </div>
-                <div class="glass-panel p-4 flex flex-col">
-                    <h3 class="font-bold text-gray-700 mb-4 text-center" id="titleChartWStacked">สัดส่วนการเบิก (ตามรายการ)</h3>
-                    <div class="flex-1 relative w-full"><canvas id="chartWithdrawTypeBar"></canvas></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ============================================== -->
-        <!-- TAB: Manage Purchase -->
-        <!-- ============================================== -->
-        <div id="tab-manage-purchase" class="tab-content hidden flex flex-col h-full">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-2xl font-bold text-gray-800"><i class="fas fa-database text-blue-600 mr-2"></i> จัดการข้อมูลจัดซื้อ</h2>
-                <button id="btn-add-purchase" onclick="openModal('purchase')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow transition hidden"><i class="fas fa-plus mr-1"></i> เพิ่มข้อมูล</button>
-            </div>
-            <div class="glass-panel flex-1 overflow-hidden flex flex-col">
-                <div class="p-4 border-b border-gray-200 bg-gray-50">
-                    <input type="text" id="searchManagePurchase" onkeyup="renderTable('purchase')" placeholder="ค้นหาเลขที่บิล / บริษัท..." class="w-full md:w-1/3 bg-white border border-gray-300 rounded-lg px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-                <div class="flex-1 overflow-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead class="sticky top-0 bg-gray-100 z-10 text-sm text-gray-600">
-                            <tr>
-                                <th class="p-3 border-b border-gray-200">เลขที่บิล</th>
-                                <th class="p-3 border-b border-gray-200">บริษัท</th>
-                                <th class="p-3 border-b border-gray-200">ปีงบประมาณ</th>
-                                <th class="p-3 border-b border-gray-200">เดือน</th>
-                                <th class="p-3 border-b border-gray-200">ประเภท</th>
-                                <th class="p-3 border-b border-gray-200 text-right">จำนวนเงิน</th>
-                                <th id="th-action-purchase" class="p-3 border-b border-gray-200 text-center hidden">จัดการ</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tbody-manage-purchase" class="text-sm text-gray-700"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- ============================================== -->
-        <!-- TAB: Manage Withdraw -->
-        <!-- ============================================== -->
-        <div id="tab-manage-withdraw" class="tab-content hidden flex flex-col h-full">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-2xl font-bold text-gray-800"><i class="fas fa-edit text-purple-600 mr-2"></i> จัดการข้อมูลเบิก-จ่าย</h2>
-                <button id="btn-add-withdraw" onclick="openModal('withdraw')" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg shadow transition hidden"><i class="fas fa-plus mr-1"></i> เพิ่มข้อมูล</button>
-            </div>
-            <div class="glass-panel flex-1 overflow-hidden flex flex-col">
-                <div class="p-4 border-b border-gray-200 bg-gray-50">
-                    <input type="text" id="searchManageWithdraw" onkeyup="renderTable('withdraw')" placeholder="ค้นหาหน่วยงาน / รายการ..." class="w-full md:w-1/3 bg-white border border-gray-300 rounded-lg px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500">
-                </div>
-                <div class="flex-1 overflow-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead class="sticky top-0 bg-gray-100 z-10 text-sm text-gray-600">
-                            <tr>
-                                <th class="p-3 border-b border-gray-200">หน่วยงาน</th>
-                                <th class="p-3 border-b border-gray-200">รายการ</th>
-                                <th class="p-3 border-b border-gray-200">ปี / เดือน</th>
-                                <th class="p-3 border-b border-gray-200 text-right">จำนวน</th>
-                                <th class="p-3 border-b border-gray-200 text-right">ราคา/หน่วย</th>
-                                <th class="p-3 border-b border-gray-200 text-right">ราคารวม</th>
-                                <th id="th-action-withdraw" class="p-3 border-b border-gray-200 text-center hidden">จัดการ</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tbody-manage-withdraw" class="text-sm text-gray-700"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- ============================================== -->
-        <!-- TAB: Report Purchase -->
-        <!-- ============================================== -->
-        <div id="tab-report-purchase" class="tab-content hidden flex flex-col h-full">
-            <div class="flex justify-between items-center mb-4 no-print">
-                <h2 class="text-2xl font-bold text-gray-800"><i class="fas fa-print text-blue-600 mr-2"></i> รายงานสรุป — จัดซื้อรายบริษัท</h2>
-                <button onclick="printReport('purchase')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg shadow transition"><i class="fas fa-file-pdf mr-1"></i> Print / Save PDF</button>
-            </div>
-            <div class="glass-panel flex-1 overflow-hidden flex flex-col">
-                <div class="p-4 border-b border-gray-200 bg-gray-50 no-print flex flex-col gap-4">
-                    <input type="text" id="searchReportPurchase" onkeyup="renderReport('purchase')" placeholder="ค้นหาชื่อบริษัท..." class="w-full md:w-1/3 bg-white border border-gray-300 rounded-lg px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    
-                    <div class="glass-panel p-3 flex flex-col md:flex-row flex-wrap items-start md:items-center gap-4 text-sm bg-blue-50/50 w-full">
-                        <div class="flex items-center gap-3 font-medium text-gray-700">
-                            <label class="cursor-pointer flex items-center gap-1"><input type="radio" name="rp_filter_type" value="all" checked onchange="toggleReportPurchaseFilter()"> ทั้งหมด</label>
-                            <label class="cursor-pointer flex items-center gap-1"><input type="radio" name="rp_filter_type" value="budget" onchange="toggleReportPurchaseFilter()"> ปีงบประมาณ</label>
-                            <label class="cursor-pointer flex items-center gap-1"><input type="radio" name="rp_filter_type" value="range" onchange="toggleReportPurchaseFilter()"> ช่วงเดือน/พ.ศ.</label>
+                    <div class="glass-panel p-3 flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-4 text-sm bg-blue-50/50 w-full xl:w-auto">
+                        <div class="flex items-center gap-3 font-medium text-gray-700 flex-wrap">
+                            <label class="cursor-pointer flex items-center gap-1"><input type="radio" name="p_filter_type" value="all" checked onchange="togglePurchaseFilter()"> ทั้งหมด</label>
+                            <label class="cursor-pointer flex items-center gap-1"><input type="radio" name="p_filter_type" value="budget" onchange="togglePurchaseFilter()"> ปีงบ</label>
+                            <label class="cursor-pointer flex items-center gap-1"><input type="radio" name="p_filter_type" value="range" onchange="togglePurchaseFilter()"> ช่วงเดือน</label>
                         </div>
                         
-                        <div id="filter-container-rp-budget" class="flex gap-2 items-center hidden">
-                            <select id="filter-rp-budget" onchange="renderReport('purchase')" class="border border-gray-300 rounded px-2 py-1 bg-white"><option value="">-- เลือกปีงบ --</option></select>
+                        <div id="filter-container-budget" class="flex gap-2 items-center hidden">
+                            <select id="filter-p-budget" onchange="applyPurchaseFilter()" class="border border-gray-300 rounded px-2 py-1 bg-white w-full"><option value="">-- เลือกปีงบ --</option></select>
                         </div>
 
-                        <div id="filter-container-rp-range" class="flex gap-2 items-center hidden flex-wrap">
+                        <div id="filter-container-range" class="flex gap-2 items-center hidden flex-wrap">
                             <span class="text-gray-500">ตั้งแต่:</span>
-                            <select id="filter-rp-m-from" onchange="renderReport('purchase')" class="border border-gray-300 rounded px-2 py-1 bg-white"></select>
-                            <select id="filter-rp-y-from" onchange="renderReport('purchase')" class="border border-gray-300 rounded px-2 py-1 bg-white"></select>
-                            <span class="text-gray-500 ml-2">ถึง:</span>
-                            <select id="filter-rp-m-to" onchange="renderReport('purchase')" class="border border-gray-300 rounded px-2 py-1 bg-white"></select>
-                            <select id="filter-rp-y-to" onchange="renderReport('purchase')" class="border border-gray-300 rounded px-2 py-1 bg-white"></select>
+                            <select id="filter-p-m-from" onchange="applyPurchaseFilter()" class="border border-gray-300 rounded px-2 py-1 bg-white"></select>
+                            <select id="filter-p-y-from" onchange="applyPurchaseFilter()" class="border border-gray-300 rounded px-2 py-1 bg-white"></select>
+                            <span class="text-gray-500 ml-2 hidden sm:inline">ถึง:</span>
+                            <select id="filter-p-m-to" onchange="applyPurchaseFilter()" class="border border-gray-300 rounded px-2 py-1 bg-white"></select>
+                            <select id="filter-p-y-to" onchange="applyPurchaseFilter()" class="border border-gray-300 rounded px-2 py-1 bg-white"></select>
                         </div>
                     </div>
                 </div>
-                <div class="flex-1 overflow-auto p-4 bg-gray-100" id="report-container-purchase"></div>
-            </div>
-        </div>
 
-        <!-- ============================================== -->
-        <!-- TAB: Report Withdraw -->
-        <!-- ============================================== -->
-        <div id="tab-report-withdraw" class="tab-content hidden flex flex-col h-full">
-            <div class="flex justify-between items-center mb-4 no-print">
-                <h2 class="text-2xl font-bold text-gray-800"><i class="fas fa-file-invoice text-purple-600 mr-2"></i> รายงานสรุป — เบิกจ่ายรายหน่วยงาน</h2>
-                <button onclick="printReport('withdraw')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg shadow transition"><i class="fas fa-file-pdf mr-1"></i> Print / Save PDF</button>
+                <div class="flex justify-end">
+                    <div class="glass-panel px-4 py-2 inline-flex items-center gap-4 text-sm bg-white shadow-sm flex-wrap w-full sm:w-auto">
+                        <span class="font-bold text-gray-700"><i class="fas fa-filter text-blue-500 mr-1"></i> ตัวกรองกราฟ:</span>
+                        <select id="p_chart_comp" onchange="applyPurchaseFilter()" class="flex-1 sm:flex-none border border-gray-300 rounded px-2 py-1 text-gray-700 focus:outline-none focus:border-blue-500 max-w-full sm:max-w-[200px] truncate">
+                            <option value="all">-- ทุกบริษัท --</option>
+                        </select>
+                        <select id="p_chart_type" onchange="applyPurchaseFilter()" class="flex-1 sm:flex-none border border-gray-300 rounded px-2 py-1 text-gray-700 focus:outline-none focus:border-blue-500">
+                            <option value="all">-- ทุกประเภทจัดซื้อ --</option>
+                            <option value="เจาะจง">เจาะจง</option>
+                            <option value="สนับสนุน">สนับสนุน</option>
+                            <option value="E-bid">E-bid</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 md:gap-4">
+                    <div class="glass-panel p-3 md:p-4 border-l-4 border-l-blue-500">
+                        <p class="text-gray-500 text-xs font-semibold uppercase truncate">จำนวนบริษัท</p>
+                        <h3 id="stat-p-companies" class="text-xl md:text-2xl font-bold text-gray-800 mt-1">0</h3>
+                    </div>
+                    <div class="glass-panel p-3 md:p-4 border-l-4 border-l-green-500">
+                        <p class="text-gray-500 text-xs font-semibold uppercase truncate">มูลค่าจัดซื้อรวม</p>
+                        <h3 id="stat-p-total" class="text-lg md:text-xl font-bold text-green-600 mt-1 truncate" title="">0 ฿</h3>
+                    </div>
+                    <div class="glass-panel p-3 md:p-4 border-l-4 border-l-orange-500 col-span-2 md:col-span-1">
+                        <p class="text-gray-500 text-xs font-semibold uppercase truncate">บริษัทจัดซื้อสูงสุด</p>
+                        <h3 id="stat-p-topcomp" class="text-base md:text-lg font-bold text-gray-800 mt-1 truncate" title="-">-</h3>
+                    </div>
+                    <div class="glass-panel p-3 md:p-4 border-l-4 border-l-blue-400 bg-blue-50/50">
+                        <p class="text-gray-500 text-xs font-semibold uppercase truncate">ประเภท: เจาะจง</p>
+                        <h3 id="stat-p-specific" class="text-base md:text-lg font-bold text-blue-700 mt-1 truncate" title="">0 ฿</h3>
+                    </div>
+                    <div class="glass-panel p-3 md:p-4 border-l-4 border-l-emerald-400 bg-emerald-50/50">
+                        <p class="text-gray-500 text-xs font-semibold uppercase truncate">ประเภท: สนับสนุน</p>
+                        <h3 id="stat-p-support" class="text-base md:text-lg font-bold text-emerald-700 mt-1 truncate" title="">0 ฿</h3>
+                    </div>
+                    <div class="glass-panel p-3 md:p-4 border-l-4 border-l-amber-400 bg-amber-50/50 col-span-2 md:col-span-1 xl:col-span-1">
+                        <p class="text-gray-500 text-xs font-semibold uppercase truncate">ประเภท: E-bid</p>
+                        <h3 id="stat-p-ebid" class="text-base md:text-lg font-bold text-amber-700 mt-1 truncate" title="">0 ฿</h3>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 flex-1">
+                    <div class="glass-panel p-4 flex flex-col min-h-[300px] md:min-h-[350px]">
+                        <h3 class="font-bold text-gray-700 mb-4 text-center text-sm md:text-base" id="chart-title-p-1">มูลค่าจัดซื้อเปรียบเทียบทุกบริษัท</h3>
+                        <div class="flex-1 relative w-full h-full"><canvas id="chartPurchaseBar"></canvas></div>
+                    </div>
+                    <div class="glass-panel p-4 flex flex-col min-h-[300px] md:min-h-[350px]">
+                        <h3 class="font-bold text-gray-700 mb-4 text-center text-sm md:text-base" id="titleChartStacked">สัดส่วนต่อบริษัท (ตามประเภทจัดซื้อ)</h3>
+                        <div class="flex-1 relative w-full h-full"><canvas id="chartPurchaseTypeBar"></canvas></div>
+                    </div>
+                </div>
             </div>
-            <div class="glass-panel flex-1 overflow-hidden flex flex-col">
-                <div class="p-4 border-b border-gray-200 bg-gray-50 no-print flex flex-col gap-4">
-                    <input type="text" id="searchReportWithdraw" onkeyup="renderReport('withdraw')" placeholder="ค้นหาชื่อหน่วยงาน..." class="w-full md:w-1/3 bg-white border border-gray-300 rounded-lg px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500">
+
+            <!-- ============================================== -->
+            <!-- TAB: Dashboard เบิก-จ่าย -->
+            <!-- ============================================== -->
+            <div id="tab-dash-withdraw" class="tab-content hidden flex flex-col gap-4">
+                <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center border-b border-gray-300 pb-3 gap-4">
+                    <h2 class="text-2xl font-bold text-gray-800"><i class="fas fa-box-open text-purple-600 mr-2"></i> ภาพรวมระบบเบิก-จ่าย</h2>
                     
-                    <div class="glass-panel p-3 flex flex-col md:flex-row flex-wrap items-start md:items-center gap-4 text-sm bg-purple-50/50 w-full">
-                        <div class="flex items-center gap-3 font-medium text-gray-700">
-                            <label class="cursor-pointer flex items-center gap-1"><input type="radio" name="rw_filter_type" value="all" checked onchange="toggleReportWithdrawFilter()"> ทั้งหมด</label>
-                            <label class="cursor-pointer flex items-center gap-1"><input type="radio" name="rw_filter_type" value="budget" onchange="toggleReportWithdrawFilter()"> ปีงบประมาณ</label>
-                            <label class="cursor-pointer flex items-center gap-1"><input type="radio" name="rw_filter_type" value="range" onchange="toggleReportWithdrawFilter()"> ช่วงเดือน/พ.ศ.</label>
+                    <div class="glass-panel p-3 flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-4 text-sm bg-purple-50/50 w-full xl:w-auto">
+                        <div class="flex items-center gap-3 font-medium text-gray-700 flex-wrap">
+                            <label class="cursor-pointer flex items-center gap-1"><input type="radio" name="w_filter_type" value="all" checked onchange="toggleWithdrawFilter()"> ทั้งหมด</label>
+                            <label class="cursor-pointer flex items-center gap-1"><input type="radio" name="w_filter_type" value="budget" onchange="toggleWithdrawFilter()"> ปีงบ</label>
+                            <label class="cursor-pointer flex items-center gap-1"><input type="radio" name="w_filter_type" value="range" onchange="toggleWithdrawFilter()"> ช่วงเดือน</label>
                         </div>
                         
-                        <div id="filter-container-rw-budget" class="flex gap-2 items-center hidden">
-                            <select id="filter-rw-budget" onchange="renderReport('withdraw')" class="border border-gray-300 rounded px-2 py-1 bg-white"><option value="">-- เลือกปีงบ --</option></select>
+                        <div id="filter-container-w-budget" class="flex gap-2 items-center hidden">
+                            <select id="filter-w-budget" onchange="applyWithdrawFilter()" class="border border-gray-300 rounded px-2 py-1 bg-white w-full"><option value="">-- เลือกปีงบ --</option></select>
                         </div>
 
-                        <div id="filter-container-rw-range" class="flex gap-2 items-center hidden flex-wrap">
+                        <div id="filter-container-w-range" class="flex gap-2 items-center hidden flex-wrap">
                             <span class="text-gray-500">ตั้งแต่:</span>
-                            <select id="filter-rw-m-from" onchange="renderReport('withdraw')" class="border border-gray-300 rounded px-2 py-1 bg-white"></select>
-                            <select id="filter-rw-y-from" onchange="renderReport('withdraw')" class="border border-gray-300 rounded px-2 py-1 bg-white"></select>
-                            <span class="text-gray-500 ml-2">ถึง:</span>
-                            <select id="filter-rw-m-to" onchange="renderReport('withdraw')" class="border border-gray-300 rounded px-2 py-1 bg-white"></select>
-                            <select id="filter-rw-y-to" onchange="renderReport('withdraw')" class="border border-gray-300 rounded px-2 py-1 bg-white"></select>
+                            <select id="filter-w-m-from" onchange="applyWithdrawFilter()" class="border border-gray-300 rounded px-2 py-1 bg-white"></select>
+                            <select id="filter-w-y-from" onchange="applyWithdrawFilter()" class="border border-gray-300 rounded px-2 py-1 bg-white"></select>
+                            <span class="text-gray-500 ml-2 hidden sm:inline">ถึง:</span>
+                            <select id="filter-w-m-to" onchange="applyWithdrawFilter()" class="border border-gray-300 rounded px-2 py-1 bg-white"></select>
+                            <select id="filter-w-y-to" onchange="applyWithdrawFilter()" class="border border-gray-300 rounded px-2 py-1 bg-white"></select>
                         </div>
                     </div>
                 </div>
-                <div class="flex-1 overflow-auto p-4 bg-gray-100" id="report-container-withdraw"></div>
-            </div>
-        </div>
 
-        <!-- ============================================== -->
-        <!-- TAB: Settings (ตั้งค่าระบบ) -->
-        <!-- ============================================== -->
-        <div id="tab-settings" class="tab-content hidden flex flex-col h-full">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-2xl font-bold text-gray-800"><i class="fas fa-cog text-gray-600 mr-2"></i> ตั้งค่าระบบ (ข้อมูลพื้นฐาน)</h2>
-            </div>
-            <div class="glass-panel p-6 flex-1 overflow-auto">
-                <p class="text-sm text-gray-500 mb-6">ข้อมูลที่เพิ่มในหน้านี้จะถูกนำไปใช้เป็นตัวเลือก (Dropdown)ในหน้าเพิ่มข้อมูล เพื่อความสะดวกและลดข้อผิดพลาดในการพิมพ์</p>
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    
-                    <!-- Company -->
-                    <div class="flex flex-col border border-gray-200 rounded-lg p-4 bg-gray-50/50">
-                        <h3 class="font-bold text-blue-700 border-b pb-2 mb-3"><i class="fas fa-building mr-1"></i> บริษัทจัดซื้อ</h3>
-                        <div class="flex gap-2 mb-3">
-                            <input type="text" id="set-company-name" placeholder="ชื่อบริษัท..." class="flex-1 border border-gray-300 rounded px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none">
-                            <button onclick="addSetting('company')" class="bg-blue-600 text-white px-3 py-1.5 rounded text-sm hover:bg-blue-700 transition"><i class="fas fa-plus"></i></button>
-                        </div>
-                        <ul id="list-set-company" class="flex-1 overflow-y-auto space-y-2 text-sm text-gray-700 max-h-[350px]"></ul>
+                <div class="flex justify-end">
+                    <div class="glass-panel px-4 py-2 inline-flex items-center gap-4 text-sm bg-white shadow-sm flex-wrap w-full sm:w-auto">
+                        <span class="font-bold text-gray-700"><i class="fas fa-filter text-purple-500 mr-1"></i> ตัวกรองกราฟ:</span>
+                        <select id="w_chart_unit" onchange="applyWithdrawFilter()" class="flex-1 sm:flex-none border border-gray-300 rounded px-2 py-1 text-gray-700 focus:outline-none focus:border-purple-500">
+                            <option value="all">-- ทุก รพ.สต. --</option>
+                        </select>
+                        <select id="w_chart_item" onchange="applyWithdrawFilter()" class="flex-1 sm:flex-none border border-gray-300 rounded px-2 py-1 text-gray-700 focus:outline-none focus:border-purple-500 max-w-full sm:max-w-[200px] truncate">
+                            <option value="all">-- ทุกรายการอุปกรณ์ --</option>
+                        </select>
                     </div>
+                </div>
 
-                    <!-- Unit -->
-                    <div class="flex flex-col border border-gray-200 rounded-lg p-4 bg-gray-50/50">
-                        <h3 class="font-bold text-purple-700 border-b pb-2 mb-3"><i class="fas fa-clinic-medical mr-1"></i> หน่วยงาน (รพ.สต.)</h3>
-                        <div class="flex gap-2 mb-3">
-                            <input type="text" id="set-unit-name" placeholder="ชื่อหน่วยงาน..." class="flex-1 border border-gray-300 rounded px-3 py-1.5 text-sm focus:border-purple-500 focus:outline-none">
-                            <button onclick="addSetting('unit')" class="bg-purple-600 text-white px-3 py-1.5 rounded text-sm hover:bg-purple-700 transition"><i class="fas fa-plus"></i></button>
-                        </div>
-                        <ul id="list-set-unit" class="flex-1 overflow-y-auto space-y-2 text-sm text-gray-700 max-h-[350px]"></ul>
+                <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 md:gap-4">
+                    <div class="glass-panel p-3 md:p-4 border-l-4 border-l-blue-500">
+                        <p class="text-gray-500 text-xs font-semibold uppercase truncate">จำนวนหน่วยงาน</p>
+                        <h3 id="stat-w-units" class="text-xl md:text-2xl font-bold text-gray-800 mt-1">0</h3>
                     </div>
+                    <div class="glass-panel p-3 md:p-4 border-l-4 border-l-red-500">
+                        <p class="text-gray-500 text-xs font-semibold uppercase truncate">มูลค่าเบิกจ่ายรวม</p>
+                        <h3 id="stat-w-total" class="text-lg md:text-xl font-bold text-red-600 mt-1 truncate" title="">0 ฿</h3>
+                    </div>
+                    <div class="glass-panel p-3 md:p-4 border-l-4 border-l-purple-500 col-span-2 md:col-span-1">
+                        <p class="text-gray-500 text-xs font-semibold uppercase truncate">หน่วยงานเบิกสูงสุด</p>
+                        <h3 id="stat-w-topunit" class="text-base md:text-lg font-bold text-gray-800 mt-1 truncate" title="-">-</h3>
+                    </div>
+                    <div class="glass-panel p-3 md:p-4 border-l-4 border-l-yellow-500">
+                        <p class="text-gray-500 text-xs font-semibold uppercase truncate">มูลค่าเบิกจ่ายสูงสุด</p>
+                        <h3 id="stat-w-maxvalue" class="text-lg md:text-xl font-bold text-yellow-600 mt-1 truncate" title="">0 ฿</h3>
+                    </div>
+                    <div class="glass-panel p-3 md:p-4 border-l-4 border-l-emerald-500">
+                        <p class="text-gray-500 text-xs font-semibold uppercase truncate">รายการเบิกสูงสุด</p>
+                        <h3 id="stat-w-topitem" class="text-sm md:text-base font-bold text-gray-800 mt-1 truncate" title="-">-</h3>
+                    </div>
+                </div>
 
-                    <!-- Item -->
-                    <div class="flex flex-col border border-gray-200 rounded-lg p-4 bg-gray-50/50">
-                        <h3 class="font-bold text-emerald-700 border-b pb-2 mb-3"><i class="fas fa-pills mr-1"></i> รายการอุปกรณ์ / น้ำยา</h3>
-                        <div class="flex flex-col gap-2 mb-3">
-                            <input type="text" id="set-item-name" placeholder="ชื่อรายการ..." class="border border-gray-300 rounded px-3 py-1.5 text-sm focus:border-emerald-500 focus:outline-none">
-                            <div class="flex gap-2">
-                                <input type="number" step="0.01" id="set-item-price" placeholder="ราคา/หน่วย" class="flex-1 border border-gray-300 rounded px-3 py-1.5 text-sm focus:border-emerald-500 focus:outline-none">
-                                <button onclick="addSetting('item')" class="bg-emerald-600 text-white px-3 py-1.5 rounded text-sm hover:bg-emerald-700 transition"><i class="fas fa-plus mr-1"></i> เพิ่ม</button>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 flex-1">
+                    <div class="glass-panel p-4 flex flex-col min-h-[300px] md:min-h-[350px]">
+                        <h3 class="font-bold text-gray-700 mb-4 text-center text-sm md:text-base" id="chart-title-w-1">มูลค่าเบิกจ่ายเปรียบเทียบทุก รพ.สต.</h3>
+                        <div class="flex-1 relative w-full h-full"><canvas id="chartWithdrawBar"></canvas></div>
+                    </div>
+                    <div class="glass-panel p-4 flex flex-col min-h-[300px] md:min-h-[350px]">
+                        <h3 class="font-bold text-gray-700 mb-4 text-center text-sm md:text-base" id="titleChartWStacked">สัดส่วนการเบิก (ตามรายการ)</h3>
+                        <div class="flex-1 relative w-full h-full"><canvas id="chartWithdrawTypeBar"></canvas></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================== -->
+            <!-- TAB: Manage Purchase -->
+            <!-- ============================================== -->
+            <div id="tab-manage-purchase" class="tab-content hidden flex-col h-full">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+                    <h2 class="text-2xl font-bold text-gray-800"><i class="fas fa-database text-blue-600 mr-2"></i> จัดการข้อมูลจัดซื้อ</h2>
+                    <button id="btn-add-purchase" onclick="openModal('purchase')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow transition hidden w-full sm:w-auto"><i class="fas fa-plus mr-1"></i> เพิ่มข้อมูล</button>
+                </div>
+                <div class="glass-panel flex-1 flex flex-col min-h-0">
+                    <div class="p-4 border-b border-gray-200 bg-gray-50 shrink-0">
+                        <input type="text" id="searchManagePurchase" onkeyup="renderTable('purchase')" placeholder="ค้นหาเลขที่บิล / บริษัท..." class="w-full md:w-1/3 bg-white border border-gray-300 rounded-lg px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div class="flex-1 overflow-auto">
+                        <table class="w-full text-left border-collapse min-w-[700px]">
+                            <thead class="sticky top-0 bg-gray-100 z-10 text-sm text-gray-600 whitespace-nowrap">
+                                <tr>
+                                    <th class="p-3 border-b border-gray-200">เลขที่บิล</th>
+                                    <th class="p-3 border-b border-gray-200">บริษัท</th>
+                                    <th class="p-3 border-b border-gray-200">ปีงบประมาณ</th>
+                                    <th class="p-3 border-b border-gray-200">เดือน</th>
+                                    <th class="p-3 border-b border-gray-200">ประเภท</th>
+                                    <th class="p-3 border-b border-gray-200 text-right">จำนวนเงิน</th>
+                                    <th id="th-action-purchase" class="p-3 border-b border-gray-200 text-center hidden">จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-manage-purchase" class="text-sm text-gray-700"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================== -->
+            <!-- TAB: Manage Withdraw -->
+            <!-- ============================================== -->
+            <div id="tab-manage-withdraw" class="tab-content hidden flex-col h-full">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+                    <h2 class="text-2xl font-bold text-gray-800"><i class="fas fa-edit text-purple-600 mr-2"></i> จัดการข้อมูลเบิก-จ่าย</h2>
+                    <button id="btn-add-withdraw" onclick="openModal('withdraw')" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg shadow transition hidden w-full sm:w-auto"><i class="fas fa-plus mr-1"></i> เพิ่มข้อมูล</button>
+                </div>
+                <div class="glass-panel flex-1 flex flex-col min-h-0">
+                    <div class="p-4 border-b border-gray-200 bg-gray-50 shrink-0">
+                        <input type="text" id="searchManageWithdraw" onkeyup="renderTable('withdraw')" placeholder="ค้นหาหน่วยงาน / รายการ..." class="w-full md:w-1/3 bg-white border border-gray-300 rounded-lg px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    </div>
+                    <div class="flex-1 overflow-auto">
+                        <table class="w-full text-left border-collapse min-w-[800px]">
+                            <thead class="sticky top-0 bg-gray-100 z-10 text-sm text-gray-600 whitespace-nowrap">
+                                <tr>
+                                    <th class="p-3 border-b border-gray-200">หน่วยงาน</th>
+                                    <th class="p-3 border-b border-gray-200">รายการ</th>
+                                    <th class="p-3 border-b border-gray-200">ปี / เดือน</th>
+                                    <th class="p-3 border-b border-gray-200 text-right">จำนวน</th>
+                                    <th class="p-3 border-b border-gray-200 text-right">ราคา/หน่วย</th>
+                                    <th class="p-3 border-b border-gray-200 text-right">ราคารวม</th>
+                                    <th id="th-action-withdraw" class="p-3 border-b border-gray-200 text-center hidden">จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-manage-withdraw" class="text-sm text-gray-700"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================== -->
+            <!-- TAB: Report Purchase -->
+            <!-- ============================================== -->
+            <div id="tab-report-purchase" class="tab-content hidden flex-col h-full">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4 no-print">
+                    <h2 class="text-2xl font-bold text-gray-800"><i class="fas fa-print text-blue-600 mr-2"></i> รายงานจัดซื้อ</h2>
+                    <button onclick="printReport('purchase')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg shadow transition w-full sm:w-auto"><i class="fas fa-file-pdf mr-1"></i> Print PDF</button>
+                </div>
+                <div class="glass-panel flex-1 flex flex-col min-h-0">
+                    <div class="p-4 border-b border-gray-200 bg-gray-50 no-print flex flex-col gap-4 shrink-0">
+                        <input type="text" id="searchReportPurchase" onkeyup="renderReport('purchase')" placeholder="ค้นหาชื่อบริษัท..." class="w-full md:w-1/3 bg-white border border-gray-300 rounded-lg px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        
+                        <div class="glass-panel p-3 flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-4 text-sm bg-blue-50/50 w-full">
+                            <div class="flex items-center gap-3 font-medium text-gray-700 flex-wrap">
+                                <label class="cursor-pointer flex items-center gap-1"><input type="radio" name="rp_filter_type" value="all" checked onchange="toggleReportPurchaseFilter()"> ทั้งหมด</label>
+                                <label class="cursor-pointer flex items-center gap-1"><input type="radio" name="rp_filter_type" value="budget" onchange="toggleReportPurchaseFilter()"> ปีงบประมาณ</label>
+                                <label class="cursor-pointer flex items-center gap-1"><input type="radio" name="rp_filter_type" value="range" onchange="toggleReportPurchaseFilter()"> ช่วงเดือน/พ.ศ.</label>
+                            </div>
+                            
+                            <div id="filter-container-rp-budget" class="flex gap-2 items-center hidden">
+                                <select id="filter-rp-budget" onchange="renderReport('purchase')" class="border border-gray-300 rounded px-2 py-1 bg-white"><option value="">-- เลือกปีงบ --</option></select>
+                            </div>
+
+                            <div id="filter-container-rp-range" class="flex gap-2 items-center hidden flex-wrap">
+                                <span class="text-gray-500">ตั้งแต่:</span>
+                                <select id="filter-rp-m-from" onchange="renderReport('purchase')" class="border border-gray-300 rounded px-2 py-1 bg-white"></select>
+                                <select id="filter-rp-y-from" onchange="renderReport('purchase')" class="border border-gray-300 rounded px-2 py-1 bg-white"></select>
+                                <span class="text-gray-500 ml-2">ถึง:</span>
+                                <select id="filter-rp-m-to" onchange="renderReport('purchase')" class="border border-gray-300 rounded px-2 py-1 bg-white"></select>
+                                <select id="filter-rp-y-to" onchange="renderReport('purchase')" class="border border-gray-300 rounded px-2 py-1 bg-white"></select>
                             </div>
                         </div>
-                        <ul id="list-set-item" class="flex-1 overflow-y-auto space-y-2 text-sm text-gray-700 max-h-[300px]"></ul>
                     </div>
-
+                    <div class="flex-1 overflow-auto p-4 bg-gray-100" id="report-container-purchase"></div>
                 </div>
             </div>
-        </div>
 
-    </main>
+            <!-- ============================================== -->
+            <!-- TAB: Report Withdraw -->
+            <!-- ============================================== -->
+            <div id="tab-report-withdraw" class="tab-content hidden flex-col h-full">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4 no-print">
+                    <h2 class="text-2xl font-bold text-gray-800"><i class="fas fa-file-invoice text-purple-600 mr-2"></i> รายงานเบิก-จ่าย</h2>
+                    <button onclick="printReport('withdraw')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg shadow transition w-full sm:w-auto"><i class="fas fa-file-pdf mr-1"></i> Print PDF</button>
+                </div>
+                <div class="glass-panel flex-1 flex flex-col min-h-0">
+                    <div class="p-4 border-b border-gray-200 bg-gray-50 no-print flex flex-col gap-4 shrink-0">
+                        <input type="text" id="searchReportWithdraw" onkeyup="renderReport('withdraw')" placeholder="ค้นหาชื่อหน่วยงาน..." class="w-full md:w-1/3 bg-white border border-gray-300 rounded-lg px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        
+                        <div class="glass-panel p-3 flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-4 text-sm bg-purple-50/50 w-full">
+                            <div class="flex items-center gap-3 font-medium text-gray-700 flex-wrap">
+                                <label class="cursor-pointer flex items-center gap-1"><input type="radio" name="rw_filter_type" value="all" checked onchange="toggleReportWithdrawFilter()"> ทั้งหมด</label>
+                                <label class="cursor-pointer flex items-center gap-1"><input type="radio" name="rw_filter_type" value="budget" onchange="toggleReportWithdrawFilter()"> ปีงบประมาณ</label>
+                                <label class="cursor-pointer flex items-center gap-1"><input type="radio" name="rw_filter_type" value="range" onchange="toggleReportWithdrawFilter()"> ช่วงเดือน/พ.ศ.</label>
+                            </div>
+                            
+                            <div id="filter-container-rw-budget" class="flex gap-2 items-center hidden">
+                                <select id="filter-rw-budget" onchange="renderReport('withdraw')" class="border border-gray-300 rounded px-2 py-1 bg-white"><option value="">-- เลือกปีงบ --</option></select>
+                            </div>
+
+                            <div id="filter-container-rw-range" class="flex gap-2 items-center hidden flex-wrap">
+                                <span class="text-gray-500">ตั้งแต่:</span>
+                                <select id="filter-rw-m-from" onchange="renderReport('withdraw')" class="border border-gray-300 rounded px-2 py-1 bg-white"></select>
+                                <select id="filter-rw-y-from" onchange="renderReport('withdraw')" class="border border-gray-300 rounded px-2 py-1 bg-white"></select>
+                                <span class="text-gray-500 ml-2">ถึง:</span>
+                                <select id="filter-rw-m-to" onchange="renderReport('withdraw')" class="border border-gray-300 rounded px-2 py-1 bg-white"></select>
+                                <select id="filter-rw-y-to" onchange="renderReport('withdraw')" class="border border-gray-300 rounded px-2 py-1 bg-white"></select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex-1 overflow-auto p-4 bg-gray-100" id="report-container-withdraw"></div>
+                </div>
+            </div>
+
+            <!-- ============================================== -->
+            <!-- TAB: Settings (ตั้งค่าระบบ) -->
+            <!-- ============================================== -->
+            <div id="tab-settings" class="tab-content hidden flex-col h-full">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-gray-800"><i class="fas fa-cog text-gray-600 mr-2"></i> ตั้งค่าระบบ</h2>
+                </div>
+                <div class="glass-panel p-4 md:p-6 flex-1 overflow-auto">
+                    <p class="text-sm text-gray-500 mb-6">ข้อมูลที่เพิ่มในหน้านี้จะถูกนำไปใช้เป็นตัวเลือก (Dropdown)ในหน้าเพิ่มข้อมูล</p>
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        
+                        <!-- Company -->
+                        <div class="flex flex-col border border-gray-200 rounded-lg p-4 bg-gray-50/50">
+                            <h3 class="font-bold text-blue-700 border-b pb-2 mb-3"><i class="fas fa-building mr-1"></i> บริษัทจัดซื้อ</h3>
+                            <div class="flex gap-2 mb-3">
+                                <input type="text" id="set-company-name" placeholder="ชื่อบริษัท..." class="flex-1 border border-gray-300 rounded px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none min-w-0">
+                                <button onclick="addSetting('company')" class="bg-blue-600 text-white px-3 py-1.5 rounded text-sm hover:bg-blue-700 transition shrink-0"><i class="fas fa-plus"></i></button>
+                            </div>
+                            <ul id="list-set-company" class="flex-1 overflow-y-auto space-y-2 text-sm text-gray-700 max-h-[350px]"></ul>
+                        </div>
+
+                        <!-- Unit -->
+                        <div class="flex flex-col border border-gray-200 rounded-lg p-4 bg-gray-50/50">
+                            <h3 class="font-bold text-purple-700 border-b pb-2 mb-3"><i class="fas fa-clinic-medical mr-1"></i> หน่วยงาน (รพ.สต.)</h3>
+                            <div class="flex gap-2 mb-3">
+                                <input type="text" id="set-unit-name" placeholder="ชื่อหน่วยงาน..." class="flex-1 border border-gray-300 rounded px-3 py-1.5 text-sm focus:border-purple-500 focus:outline-none min-w-0">
+                                <button onclick="addSetting('unit')" class="bg-purple-600 text-white px-3 py-1.5 rounded text-sm hover:bg-purple-700 transition shrink-0"><i class="fas fa-plus"></i></button>
+                            </div>
+                            <ul id="list-set-unit" class="flex-1 overflow-y-auto space-y-2 text-sm text-gray-700 max-h-[350px]"></ul>
+                        </div>
+
+                        <!-- Item -->
+                        <div class="flex flex-col border border-gray-200 rounded-lg p-4 bg-gray-50/50">
+                            <h3 class="font-bold text-emerald-700 border-b pb-2 mb-3"><i class="fas fa-pills mr-1"></i> รายการอุปกรณ์ / น้ำยา</h3>
+                            <div class="flex flex-col gap-2 mb-3">
+                                <input type="text" id="set-item-name" placeholder="ชื่อรายการ..." class="border border-gray-300 rounded px-3 py-1.5 text-sm focus:border-emerald-500 focus:outline-none">
+                                <div class="flex gap-2">
+                                    <input type="number" step="0.01" id="set-item-price" placeholder="ราคา/หน่วย" class="flex-1 border border-gray-300 rounded px-3 py-1.5 text-sm focus:border-emerald-500 focus:outline-none min-w-0">
+                                    <button onclick="addSetting('item')" class="bg-emerald-600 text-white px-3 py-1.5 rounded text-sm hover:bg-emerald-700 transition shrink-0"><i class="fas fa-plus mr-1"></i> เพิ่ม</button>
+                                </div>
+                            </div>
+                            <ul id="list-set-item" class="flex-1 overflow-y-auto space-y-2 text-sm text-gray-700 max-h-[300px]"></ul>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
 
     <!-- Datalist for Forms -->
     <datalist id="company-list"></datalist>
@@ -504,7 +518,7 @@
 
     <!-- Modals (Add/Edit) -->
     <div id="modal-purchase" class="fixed inset-0 z-50 hidden bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 relative border border-gray-200">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 relative border border-gray-200 max-h-screen overflow-y-auto">
             <button onclick="closeModal('purchase')" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600"><i class="fas fa-times text-xl"></i></button>
             <h3 class="text-xl font-bold mb-4 text-gray-800 border-b pb-2" id="modal-title-purchase">เพิ่มข้อมูลจัดซื้อ</h3>
             <form id="form-purchase" onsubmit="submitForm(event, 'purchase')" class="space-y-4">
@@ -513,7 +527,7 @@
                 <div><label class="block text-sm font-medium text-gray-700 mb-1">บริษัท</label><input type="text" id="p-company" list="company-list" required class="w-full bg-white border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-blue-500"></div>
                 <div class="grid grid-cols-3 gap-4">
                     <div><label class="block text-sm font-medium text-gray-700 mb-1">ปีงบประมาณ</label><input type="text" id="p-year" required class="w-full bg-white border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-blue-500"></div>
-                    <div><label class="block text-sm font-medium text-gray-700 mb-1">เดือน (1-12)</label><input type="text" id="p-month" required placeholder="เช่น 1, 2, 10" class="w-full bg-white border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-blue-500"></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">เดือน (1-12)</label><input type="text" id="p-month" required placeholder="เช่น 1, 2" class="w-full bg-white border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-blue-500"></div>
                     <div><label class="block text-sm font-medium text-gray-700 mb-1">ปี พ.ศ.</label><input type="text" id="p-cal-year" placeholder="เช่น 2567" class="w-full bg-white border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-blue-500"></div>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
@@ -527,7 +541,7 @@
     </div>
 
     <div id="modal-withdraw" class="fixed inset-0 z-50 hidden bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 relative border border-gray-200">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 relative border border-gray-200 max-h-screen overflow-y-auto">
             <button onclick="closeModal('withdraw')" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600"><i class="fas fa-times text-xl"></i></button>
             <h3 class="text-xl font-bold mb-4 text-gray-800 border-b pb-2" id="modal-title-withdraw">เพิ่มข้อมูลเบิก-จ่าย</h3>
             <form id="form-withdraw" onsubmit="submitForm(event, 'withdraw')" class="space-y-4">
@@ -536,7 +550,7 @@
                 <div><label class="block text-sm font-medium text-gray-700 mb-1">รายการอุปกรณ์/น้ำยา</label><input type="text" id="w-item" list="item-list" onchange="autoFillPrice()" required class="w-full bg-white border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-purple-500"></div>
                 <div class="grid grid-cols-3 gap-4">
                     <div><label class="block text-sm font-medium text-gray-700 mb-1">ปีงบประมาณ</label><input type="text" id="w-year" required class="w-full bg-white border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-purple-500"></div>
-                    <div><label class="block text-sm font-medium text-gray-700 mb-1">เดือน (1-12)</label><input type="text" id="w-month" required placeholder="เช่น 1, 2, 10" class="w-full bg-white border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-purple-500"></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">เดือน (1-12)</label><input type="text" id="w-month" required placeholder="เช่น 1, 2" class="w-full bg-white border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-purple-500"></div>
                     <div><label class="block text-sm font-medium text-gray-700 mb-1">ปี พ.ศ.</label><input type="text" id="w-cal-year" placeholder="เช่น 2567" class="w-full bg-white border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-purple-500"></div>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
@@ -580,7 +594,7 @@
         const ADMIN_PASS = 'admin123'; 
         
         let inactivityTimer;
-        const INACTIVITY_TIME_LIMIT = 30 * 60 * 1000; // 30 นาที (หน่วยเป็น ms)
+        const INACTIVITY_TIME_LIMIT = 30 * 60 * 1000; 
 
         function resetInactivityTimer() {
             clearTimeout(inactivityTimer);
@@ -592,7 +606,6 @@
             }
         }
 
-        // รีเซ็ตเวลาเมื่อมีการขยับเมาส์ เลื่อนจอ หรือกดปุ่ม
         window.addEventListener('mousemove', resetInactivityTimer);
         window.addEventListener('keydown', resetInactivityTimer);
         window.addEventListener('click', resetInactivityTimer);
@@ -601,9 +614,7 @@
         
         try {
             currentUserRole = sessionStorage.getItem('userRole');
-        } catch (error) {
-            console.warn("sessionStorage is blocked or unavailable in this environment:", error);
-        }
+        } catch (error) {}
 
         function togglePasswordInput() {
             const role = document.querySelector('input[name="login_role"]:checked').value;
@@ -657,6 +668,13 @@
             applyRolePermissions();
         }
 
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobile-overlay');
+            sidebar.classList.toggle('-translate-x-full');
+            overlay.classList.toggle('hidden');
+        }
+
         function applyRolePermissions() {
             const btnAddPurchase = document.getElementById('btn-add-purchase');
             const btnAddWithdraw = document.getElementById('btn-add-withdraw');
@@ -683,7 +701,7 @@
         }
 
         // ==========================================
-        // SYSTEM SETTINGS & LOCAL STORAGE
+        // SYSTEM SETTINGS
         // ==========================================
         let appSettings = { companies: [], units: [], items: [] };
         try {
@@ -787,16 +805,30 @@
             }
             
             switchTab('dash-purchase');
-            loadAllData(false); // โหลดครั้งแรกให้แสดง Toast
+            loadAllData(true); 
         };
 
         function switchTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.getElementById('tab-' + tabId).classList.remove('hidden');
+            document.querySelectorAll('.tab-content').forEach(el => {
+                el.classList.add('hidden');
+                el.classList.remove('flex');
+            });
+            const activeTabContent = document.getElementById('tab-' + tabId);
+            activeTabContent.classList.remove('hidden');
+            activeTabContent.classList.add('flex');
             
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
             const activeNav = document.getElementById('nav-' + tabId);
             if(activeNav) activeNav.classList.add('active');
+
+            if(window.innerWidth < 768) {
+                const sidebar = document.getElementById('sidebar');
+                const overlay = document.getElementById('mobile-overlay');
+                if(sidebar && !sidebar.classList.contains('-translate-x-full')) {
+                    sidebar.classList.add('-translate-x-full');
+                    overlay.classList.add('hidden');
+                }
+            }
 
             if(tabId === 'dash-purchase') applyPurchaseFilter(); 
             if(tabId === 'dash-withdraw') applyWithdrawFilter();
@@ -808,21 +840,13 @@
         }
 
         // ==========================================
-        // DATABASE FUNCTIONS (SUPABASE)
+        // DATABASE FUNCTIONS
         // ==========================================
-        // เพิ่มตัวแปร silent เพื่อควบคุมไม่ให้ Toast ทำงานซ้ำซ้อนตอนบันทึก
         async function loadAllData(silent = false) {
             const loadingPanel = document.getElementById('loading');
-            const loadingText = document.getElementById('loading-text');
-            if(loadingPanel) {
-                loadingText.innerText = 'กำลังดึงข้อมูลจาก Supabase...';
+            if(loadingPanel && !silent) {
                 loadingPanel.classList.remove('hidden');
             }
-
-            const timeoutId = setTimeout(() => {
-                if(loadingPanel) loadingPanel.classList.add('hidden');
-                if(!silent) showToast('การเชื่อมต่อใช้เวลานานผิดปกติ สามารถทดลองใช้งานต่อได้', 'error');
-            }, 15000);
 
             try {
                 const { data: pData, error: pError } = await supabaseClient.from('purchase').select('*').order('id', { ascending: true });
@@ -831,66 +855,32 @@
                 const { data: wData, error: wError } = await supabaseClient.from('withdraw').select('*').order('id', { ascending: true });
                 if (wError) throw wError;
 
-                if (!silent) {
-                    let warningMsg = [];
-                    if (!pData || pData.length === 0) warningMsg.push('ไม่พบข้อมูลจัดซื้อ');
-                    if (!wData || wData.length === 0) warningMsg.push('ไม่พบข้อมูลเบิกจ่าย');
-
-                    if (warningMsg.length > 0) {
-                        showToast(warningMsg.join(' | ') + ' (ตารางว่าง หรือติดสิทธิ์ RLS)', 'error');
-                    } else {
-                        showToast('เชื่อมต่อและดึงข้อมูลจาก Supabase สำเร็จ!');
-                    }
-                }
-
-                // ==========================================
-                // รองรับทั้งคอลัมน์แบบไทยและอังกฤษ
-                // ==========================================
                 dataPurchase = (pData || []).map(d => {
-                    const company = d.company || d['บริษัท'] || '';
-                    const year = d.year || d['ปีงบประมาณ'] || '';
-                    const month = d.month || d['เดือน'] || '';
-                    const type = d.type || d['ประเภท'] || '';
-                    const amount = d.amount !== undefined ? d.amount : (d['จำนวนเงิน'] !== undefined ? d['จำนวนเงิน'] : 0);
-                    const dtype = d.dtype || d.data_type || d['data_type'] || d['data type'] || '';
-                    const bill_no = d.bill_no || d['bill_no'] || '';
-                    const cal_year = d.cal_year || d['cal_year'] || '';
-
                     return {
                         _idx: d.id,
-                        company: String(company).trim(),
-                        year: String(year).trim(),
-                        month: String(month).trim(),
-                        type: String(type).trim(),
-                        amount: parseFloat(amount) || 0,
-                        dtype: String(dtype).trim(),
-                        bill_no: String(bill_no).trim(),
-                        cal_year: String(cal_year).replace(/,/g, '').split('.')[0].trim()
+                        company: String(d.company || d['บริษัท'] || '').trim(),
+                        year: String(d.year || d['ปีงบประมาณ'] || '').trim(),
+                        month: String(d.month || d['เดือน'] || '').trim(),
+                        type: String(d.type || d['ประเภท'] || '').trim(),
+                        amount: parseFloat(d.amount !== undefined ? d.amount : (d['จำนวนเงิน'] || 0)) || 0,
+                        dtype: String(d.dtype || d.data_type || d['data_type'] || '').trim(),
+                        bill_no: String(d.bill_no || '').trim(),
+                        cal_year: String(d.cal_year || '').replace(/,/g, '').split('.')[0].trim()
                     };
                 });
 
                 dataWithdraw = (wData || []).map(d => {
-                    const unit = d.unit || d['หน่วยงาน'] || '';
-                    const year = d.year || d['ปีงบประมาณ'] || '';
-                    const month = d.month || d['เดือน'] || '';
-                    const item = d.item || d.item_name || d['item_name '] || d['รายการ'] || '';
-                    const qty = d.qty !== undefined ? d.qty : (d['จำนวนที่เบิก'] !== undefined ? d['จำนวนที่เบิก'] : (d['จำนวน'] !== undefined ? d['จำนวน'] : 0));
-                    const uprice = d.uprice !== undefined ? d.uprice : (d['ราคาต่อหน่วย'] !== undefined ? d['ราคาต่อหน่วย'] : 0);
-                    const tprice = d.tprice !== undefined ? d.tprice : (d['ราคารวม'] !== undefined ? d['ราคารวม'] : 0);
-                    const dtype = d.dtype || d.data_type || d['data type'] || d['data_type'] || '';
-                    const cal_year = d.cal_year || d['cal_year'] || '';
-
                     return {
                         _idx: d.id,
-                        unit: String(unit).trim(),
-                        year: String(year).trim(),
-                        month: String(month).trim(),
-                        item: String(item).trim(),
-                        qty: parseFloat(qty) || 0,
-                        uprice: parseFloat(uprice) || 0,
-                        tprice: parseFloat(tprice) || 0,
-                        dtype: String(dtype).trim(),
-                        cal_year: String(cal_year).replace(/,/g, '').split('.')[0].trim()
+                        unit: String(d.unit || d['หน่วยงาน'] || '').trim(),
+                        year: String(d.year || d['ปีงบประมาณ'] || '').trim(),
+                        month: String(d.month || d['เดือน'] || '').trim(),
+                        item: String(d.item || d.item_name || d['รายการ'] || '').trim(),
+                        qty: parseFloat(d.qty !== undefined ? d.qty : (d['จำนวนที่เบิก'] || d['จำนวน'] || 0)) || 0,
+                        uprice: parseFloat(d.uprice !== undefined ? d.uprice : (d['ราคาต่อหน่วย'] || 0)) || 0,
+                        tprice: parseFloat(d.tprice !== undefined ? d.tprice : (d['ราคารวม'] || 0)) || 0,
+                        dtype: String(d.dtype || d.data_type || d['data_type'] || '').trim(),
+                        cal_year: String(d.cal_year || '').replace(/,/g, '').split('.')[0].trim()
                     };
                 });
 
@@ -902,16 +892,11 @@
                     switchTab(currentTabId);
                 }
 
-                clearTimeout(timeoutId);
                 if(loadingPanel) loadingPanel.classList.add('hidden');
 
             } catch (error) {
-                clearTimeout(timeoutId);
                 console.error("Supabase Error: ", error);
-                if(!silent) {
-                    alert("พบข้อผิดพลาดจากฐานข้อมูล Supabase:\n" + (error.message || "กรุณาตรวจสอบโครงสร้างตารางหรือ API Key"));
-                    showToast('เกิดข้อผิดพลาดในการดึงข้อมูลจาก Server', 'error');
-                }
+                if(!silent) showToast('เกิดข้อผิดพลาดในการดึงข้อมูลจาก Server', 'error');
                 if(loadingPanel) loadingPanel.classList.add('hidden');
             }
         }
@@ -932,111 +917,48 @@
             const sheetItems = [...new Set(dataWithdraw.map(d=>d.item))];
             const wItems = [...new Set([...sheetItems, ...appSettings.items.map(i=>i.name)])].filter(Boolean).sort();
 
-            const selBudget = document.getElementById('filter-p-budget');
-            const selYFrom = document.getElementById('filter-p-y-from');
-            const selYTo = document.getElementById('filter-p-y-to');
-            const selRPBudget = document.getElementById('filter-rp-budget');
-            const selRPYFrom = document.getElementById('filter-rp-y-from');
-            const selRPYTo = document.getElementById('filter-rp-y-to');
-            
-            if(selBudget) selBudget.innerHTML = '<option value="">-- เลือกปีงบ --</option>';
-            if(selRPBudget) selRPBudget.innerHTML = '<option value="">-- เลือกปีงบ --</option>';
-            if(selYFrom) selYFrom.innerHTML = '<option value="">พ.ศ.</option>';
-            if(selYTo) selYTo.innerHTML = '<option value="">พ.ศ.</option>';
-            if(selRPYFrom) selRPYFrom.innerHTML = '<option value="">พ.ศ.</option>';
-            if(selRPYTo) selRPYTo.innerHTML = '<option value="">พ.ศ.</option>';
+            const sets = [
+                { id: 'filter-p-budget', data: budgetYearsP, def: '-- เลือกปีงบ --' },
+                { id: 'filter-rp-budget', data: budgetYearsP, def: '-- เลือกปีงบ --' },
+                { id: 'filter-w-budget', data: budgetYearsW, def: '-- เลือกปีงบ --' },
+                { id: 'filter-rw-budget', data: budgetYearsW, def: '-- เลือกปีงบ --' }
+            ];
 
-            budgetYearsP.forEach(y => {
-                if(selBudget) selBudget.innerHTML += `<option value="${y}">${y}</option>`;
-                if(selRPBudget) selRPBudget.innerHTML += `<option value="${y}">${y}</option>`;
-            });
-            calYearsP.forEach(y => {
-                if(selYFrom) selYFrom.innerHTML += `<option value="${y}">${y}</option>`;
-                if(selYTo) selYTo.innerHTML += `<option value="${y}">${y}</option>`;
-                if(selRPYFrom) selRPYFrom.innerHTML += `<option value="${y}">${y}</option>`;
-                if(selRPYTo) selRPYTo.innerHTML += `<option value="${y}">${y}</option>`;
+            sets.forEach(s => {
+                const el = document.getElementById(s.id);
+                if(el) { el.innerHTML = `<option value="">${s.def}</option>`; s.data.forEach(v => el.innerHTML += `<option value="${v}">${v}</option>`); }
             });
 
-            // สร้าง Dropdown ให้หน้าภาพรวมระบบจัดซื้อ (ตัวกรองบริษัท)
+            const ySets = [ 'filter-p-y-from', 'filter-p-y-to', 'filter-rp-y-from', 'filter-rp-y-to' ];
+            ySets.forEach(id => {
+                const el = document.getElementById(id);
+                if(el) { el.innerHTML = '<option value="">พ.ศ.</option>'; calYearsP.forEach(v => el.innerHTML += `<option value="${v}">${v}</option>`); }
+            });
+
+            const ywSets = [ 'filter-w-y-from', 'filter-w-y-to', 'filter-rw-y-from', 'filter-rw-y-to' ];
+            ywSets.forEach(id => {
+                const el = document.getElementById(id);
+                if(el) { el.innerHTML = '<option value="">พ.ศ.</option>'; calYearsW.forEach(v => el.innerHTML += `<option value="${v}">${v}</option>`); }
+            });
+
+            const mSets = [ 'filter-p-m-from', 'filter-p-m-to', 'filter-w-m-from', 'filter-w-m-to', 'filter-rp-m-from', 'filter-rp-m-to', 'filter-rw-m-from', 'filter-rw-m-to' ];
+            mSets.forEach(id => {
+                const el = document.getElementById(id);
+                if(el) { el.innerHTML = '<option value="">เดือน</option>'; months.forEach(m => el.innerHTML += `<option value="${m}">${getMonthName(m)}</option>`); }
+            });
+
             const selPChartComp = document.getElementById('p_chart_comp');
-            if(selPChartComp) {
-                selPChartComp.innerHTML = '<option value="all">-- ทุกบริษัท --</option>';
-                companies.forEach(c => selPChartComp.innerHTML += `<option value="${c}">${c}</option>`);
-            }
-
-            const selWBudget = document.getElementById('filter-w-budget');
-            const selWYFrom = document.getElementById('filter-w-y-from');
-            const selWYTo = document.getElementById('filter-w-y-to');
-            const selRWBudget = document.getElementById('filter-rw-budget');
-            const selRWYFrom = document.getElementById('filter-rw-y-from');
-            const selRWYTo = document.getElementById('filter-rw-y-to');
-
-            if(selWBudget) selWBudget.innerHTML = '<option value="">-- เลือกปีงบ --</option>';
-            if(selRWBudget) selRWBudget.innerHTML = '<option value="">-- เลือกปีงบ --</option>';
-            if(selWYFrom) selWYFrom.innerHTML = '<option value="">พ.ศ.</option>';
-            if(selWYTo) selWYTo.innerHTML = '<option value="">พ.ศ.</option>';
-            if(selRWYFrom) selRWYFrom.innerHTML = '<option value="">พ.ศ.</option>';
-            if(selRWYTo) selRWYTo.innerHTML = '<option value="">พ.ศ.</option>';
-
-            budgetYearsW.forEach(y => {
-                if(selWBudget) selWBudget.innerHTML += `<option value="${y}">${y}</option>`;
-                if(selRWBudget) selRWBudget.innerHTML += `<option value="${y}">${y}</option>`;
-            });
-            calYearsW.forEach(y => {
-                if(selWYFrom) selWYFrom.innerHTML += `<option value="${y}">${y}</option>`;
-                if(selWYTo) selWYTo.innerHTML += `<option value="${y}">${y}</option>`;
-                if(selRWYFrom) selRWYFrom.innerHTML += `<option value="${y}">${y}</option>`;
-                if(selRWYTo) selRWYTo.innerHTML += `<option value="${y}">${y}</option>`;
-            });
+            if(selPChartComp) { selPChartComp.innerHTML = '<option value="all">-- ทุกบริษัท --</option>'; companies.forEach(c => selPChartComp.innerHTML += `<option value="${c}">${c}</option>`); }
 
             const selWChartUnit = document.getElementById('w_chart_unit');
+            if(selWChartUnit) { selWChartUnit.innerHTML = '<option value="all">-- ทุก รพ.สต. --</option>'; wUnits.forEach(u => selWChartUnit.innerHTML += `<option value="${u}">${u}</option>`); }
+            
             const selWChartItem = document.getElementById('w_chart_item');
-            if(selWChartUnit) {
-                selWChartUnit.innerHTML = '<option value="all">-- ทุก รพ.สต. --</option>';
-                wUnits.forEach(u => selWChartUnit.innerHTML += `<option value="${u}">${u}</option>`);
-            }
-            if(selWChartItem) {
-                selWChartItem.innerHTML = '<option value="all">-- ทุกรายการอุปกรณ์ --</option>';
-                wItems.forEach(i => selWChartItem.innerHTML += `<option value="${i}">${i}</option>`);
-            }
+            if(selWChartItem) { selWChartItem.innerHTML = '<option value="all">-- ทุกรายการอุปกรณ์ --</option>'; wItems.forEach(i => selWChartItem.innerHTML += `<option value="${i}">${i}</option>`); }
 
-            const selMFrom = document.getElementById('filter-p-m-from');
-            const selMTo = document.getElementById('filter-p-m-to');
-            const selWMFrom = document.getElementById('filter-w-m-from');
-            const selWMTo = document.getElementById('filter-w-m-to');
-            const selRPMFrom = document.getElementById('filter-rp-m-from');
-            const selRPMTo = document.getElementById('filter-rp-m-to');
-            const selRWMFrom = document.getElementById('filter-rw-m-from');
-            const selRWMTo = document.getElementById('filter-rw-m-to');
-            
-            if(selMFrom) selMFrom.innerHTML = '<option value="">เดือน</option>';
-            if(selMTo) selMTo.innerHTML = '<option value="">เดือน</option>';
-            if(selWMFrom) selWMFrom.innerHTML = '<option value="">เดือน</option>';
-            if(selWMTo) selWMTo.innerHTML = '<option value="">เดือน</option>';
-            if(selRPMFrom) selRPMFrom.innerHTML = '<option value="">เดือน</option>';
-            if(selRPMTo) selRPMTo.innerHTML = '<option value="">เดือน</option>';
-            if(selRWMFrom) selRWMFrom.innerHTML = '<option value="">เดือน</option>';
-            if(selRWMTo) selRWMTo.innerHTML = '<option value="">เดือน</option>';
-            
-            months.forEach(m => {
-                if(selMFrom) selMFrom.innerHTML += `<option value="${m}">${getMonthName(m)}</option>`;
-                if(selMTo) selMTo.innerHTML += `<option value="${m}">${getMonthName(m)}</option>`;
-                if(selWMFrom) selWMFrom.innerHTML += `<option value="${m}">${getMonthName(m)}</option>`;
-                if(selWMTo) selWMTo.innerHTML += `<option value="${m}">${getMonthName(m)}</option>`;
-                if(selRPMFrom) selRPMFrom.innerHTML += `<option value="${m}">${getMonthName(m)}</option>`;
-                if(selRPMTo) selRPMTo.innerHTML += `<option value="${m}">${getMonthName(m)}</option>`;
-                if(selRWMFrom) selRWMFrom.innerHTML += `<option value="${m}">${getMonthName(m)}</option>`;
-                if(selRWMTo) selRWMTo.innerHTML += `<option value="${m}">${getMonthName(m)}</option>`;
-            });
-
-            const datalistComp = document.getElementById('company-list');
-            if(datalistComp) { datalistComp.innerHTML = ''; companies.forEach(c => datalistComp.innerHTML += `<option value="${c}">`); }
-            
-            const datalistUnit = document.getElementById('unit-list');
-            if(datalistUnit) { datalistUnit.innerHTML = ''; wUnits.forEach(u => datalistUnit.innerHTML += `<option value="${u}">`); }
-            
-            const datalistItem = document.getElementById('item-list');
-            if(datalistItem) { datalistItem.innerHTML = ''; wItems.forEach(i => datalistItem.innerHTML += `<option value="${i}">`); }
+            const dComp = document.getElementById('company-list'); if(dComp) { dComp.innerHTML = ''; companies.forEach(c => dComp.innerHTML += `<option value="${c}">`); }
+            const dUnit = document.getElementById('unit-list'); if(dUnit) { dUnit.innerHTML = ''; wUnits.forEach(u => dUnit.innerHTML += `<option value="${u}">`); }
+            const dItem = document.getElementById('item-list'); if(dItem) { dItem.innerHTML = ''; wItems.forEach(i => dItem.innerHTML += `<option value="${i}">`); }
         }
 
         const fmtMoney = n => Number(n).toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2});
@@ -1061,23 +983,12 @@
         }
 
         // ==========================================
-        // DASHBOARDS - PURCHASE 
+        // DASHBOARDS 
         // ==========================================
         function togglePurchaseFilter() {
             const type = document.querySelector('input[name="p_filter_type"]:checked').value;
-            const conBudget = document.getElementById('filter-container-budget');
-            const conRange = document.getElementById('filter-container-range');
-
-            if(type === 'all') {
-                conBudget.classList.add('hidden');
-                conRange.classList.add('hidden');
-            } else if (type === 'budget') {
-                conBudget.classList.remove('hidden');
-                conRange.classList.add('hidden');
-            } else if (type === 'range') {
-                conBudget.classList.add('hidden');
-                conRange.classList.remove('hidden');
-            }
+            document.getElementById('filter-container-budget').classList.toggle('hidden', type !== 'budget');
+            document.getElementById('filter-container-range').classList.toggle('hidden', type !== 'range');
             applyPurchaseFilter();
         }
 
@@ -1109,10 +1020,8 @@
                 }
             }
 
-            const selCompElement = document.getElementById('p_chart_comp');
-            const selTypeElement = document.getElementById('p_chart_type');
-            const selComp = selCompElement ? selCompElement.value : 'all';
-            const selType = selTypeElement ? selTypeElement.value : 'all';
+            const selComp = document.getElementById('p_chart_comp')?.value || 'all';
+            const selType = document.getElementById('p_chart_type')?.value || 'all';
 
             let chartData = [...filtered];
             if(selComp !== 'all') chartData = chartData.filter(d => d.company === selComp);
@@ -1153,7 +1062,6 @@
             
             const xAxisMode = selComp === 'all' ? 'comp' : 'year';
 
-            // Chart 1
             let labelsBar1 = [];
             let datasetsBar1 = [];
 
@@ -1163,9 +1071,7 @@
                 datasetsBar1 = uniqueYearsBar.map((year, i) => ({
                     label: year,
                     backgroundColor: colorsBar[i % colorsBar.length],
-                    data: sortedComps.map(x => {
-                        return dataObj.filter(d => d.company === x[0] && d.year === year).reduce((s, d)=>s+d.amount, 0);
-                    }),
+                    data: sortedComps.map(x => dataObj.filter(d => d.company === x[0] && d.year === year).reduce((s, d)=>s+d.amount, 0)),
                     borderRadius: 4
                 }));
             } else {
@@ -1174,39 +1080,26 @@
                 datasetsBar1 = [{
                     label: 'มูลค่า (บาท)',
                     backgroundColor: '#3b82f6',
-                    data: uniqueYearsBar.map(y => {
-                        return dataObj.filter(d => d.year === y).reduce((s, d)=>s+d.amount, 0);
-                    }),
+                    data: uniqueYearsBar.map(y => dataObj.filter(d => d.year === y).reduce((s, d)=>s+d.amount, 0)),
                     borderRadius: 4
                 }];
             }
 
             if(chartPBar) chartPBar.destroy();
             chartPBar = new Chart(document.getElementById('chartPurchaseBar'), {
-                type: 'bar',
-                data: {
-                    labels: labelsBar1,
-                    datasets: datasetsBar1
-                },
-                options: { 
-                    maintainAspectRatio: false, 
-                    plugins: { legend: { display: true, position: 'bottom' }, tooltip: { mode: 'index', intersect: false } }, 
-                    scales: { y: { grid: { color: '#e5e7eb' }, border: { dash: [4, 4] } }, x: { grid: { display: false } } } 
-                }
+                type: 'bar', data: { labels: labelsBar1, datasets: datasetsBar1 },
+                options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom' }, tooltip: { mode: 'index', intersect: false } }, scales: { y: { grid: { color: '#e5e7eb' }, border: { dash: [4, 4] } }, x: { grid: { display: false } } } }
             });
 
-            // Chart 2
             document.getElementById('titleChartStacked').innerText = selComp === 'all' ? 'สัดส่วนต่อบริษัท (ตามประเภทจัดซื้อ)' : `สัดส่วนประเภทจัดซื้อ: ${selComp}`;
             
             let labelsStacked = xAxisMode === 'comp' ? sortedComps.map(x => x[0].length > 15 ? x[0].substring(0,15) + '...' : x[0]) : uniqueYearsBar;
             let datasetsStacked = [];
             
             if (selType === 'all') {
-                const types = ['เจาะจง', 'สนับสนุน', 'E-bid'];
-                types.forEach((t, i) => {
+                ['เจาะจง', 'สนับสนุน', 'E-bid'].forEach((t, i) => {
                     datasetsStacked.push({
-                        label: t, 
-                        backgroundColor: colorsBar[i % colorsBar.length],
+                        label: t, backgroundColor: colorsBar[i % colorsBar.length],
                         data: labelsStacked.map((lbl, idx) => {
                             const filterKey = xAxisMode === 'comp' ? sortedComps[idx][0] : lbl;
                             return dataObj.filter(d => (xAxisMode==='comp' ? d.company === filterKey : d.year === filterKey) && d.type === t).reduce((s,d)=>s+d.amount, 0);
@@ -1215,8 +1108,7 @@
                 });
             } else {
                 datasetsStacked.push({
-                    label: selType, 
-                    backgroundColor: colorsBar[0],
+                    label: selType, backgroundColor: colorsBar[0],
                     data: labelsStacked.map((lbl, idx) => {
                         const filterKey = xAxisMode === 'comp' ? sortedComps[idx][0] : lbl;
                         return dataObj.filter(d => (xAxisMode==='comp' ? d.company === filterKey : d.year === filterKey) && d.type === selType).reduce((s,d)=>s+d.amount, 0);
@@ -1226,13 +1118,8 @@
 
             if(chartPTypeBar) chartPTypeBar.destroy();
             chartPTypeBar = new Chart(document.getElementById('chartPurchaseTypeBar'), {
-                type: 'bar',
-                data: { labels: labelsStacked, datasets: datasetsStacked },
-                options: { 
-                    maintainAspectRatio: false, 
-                    scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, grid: { color: '#e5e7eb' }, border: { dash: [4, 4] } } },
-                    plugins: { legend: { position: 'bottom' }, tooltip: { mode: 'index', intersect: false } } 
-                }
+                type: 'bar', data: { labels: labelsStacked, datasets: datasetsStacked },
+                options: { maintainAspectRatio: false, scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, grid: { color: '#e5e7eb' }, border: { dash: [4, 4] } } }, plugins: { legend: { position: 'bottom' }, tooltip: { mode: 'index', intersect: false } } }
             });
         }
 
@@ -1241,19 +1128,8 @@
         // ==========================================
         function toggleWithdrawFilter() {
             const type = document.querySelector('input[name="w_filter_type"]:checked').value;
-            const conBudget = document.getElementById('filter-container-w-budget');
-            const conRange = document.getElementById('filter-container-w-range');
-
-            if(type === 'all') {
-                conBudget.classList.add('hidden');
-                conRange.classList.add('hidden');
-            } else if (type === 'budget') {
-                conBudget.classList.remove('hidden');
-                conRange.classList.add('hidden');
-            } else if (type === 'range') {
-                conBudget.classList.add('hidden');
-                conRange.classList.remove('hidden');
-            }
+            document.getElementById('filter-container-w-budget').classList.toggle('hidden', type !== 'budget');
+            document.getElementById('filter-container-w-range').classList.toggle('hidden', type !== 'range');
             applyWithdrawFilter();
         }
 
@@ -1285,10 +1161,8 @@
                 }
             }
             
-            const selUnitElement = document.getElementById('w_chart_unit');
-            const selItemElement = document.getElementById('w_chart_item');
-            const selUnit = selUnitElement ? selUnitElement.value : 'all';
-            const selItem = selItemElement ? selItemElement.value : 'all';
+            const selUnit = document.getElementById('w_chart_unit')?.value || 'all';
+            const selItem = document.getElementById('w_chart_item')?.value || 'all';
             
             let chartData = [...filtered];
             if(selUnit !== 'all') chartData = chartData.filter(d => d.unit === selUnit);
@@ -1315,7 +1189,6 @@
             const sortedUnits = Object.entries(unitTotals).sort((a,b)=>b[1]-a[1]);
             const sortedItemsByVal = Object.entries(itemValueTotals).sort((a,b)=>b[1]-a[1]); 
 
-            // อัปเดตข้อมูลหน่วยงานที่เบิกมูลค่าสูงสุด
             if(sortedUnits.length > 0) {
                 document.getElementById('stat-w-topunit').innerText = sortedUnits[0][0];
                 document.getElementById('stat-w-topunit').title = sortedUnits[0][0] + ` (${fmtMoney(sortedUnits[0][1])} ฿)`;
@@ -1323,13 +1196,9 @@
                 document.getElementById('stat-w-topunit').innerText = "-";
             }
 
-            // อัปเดตข้อมูลรายการเบิก และ มูลค่าเบิกจ่ายสูงสุด โดยอิงจาก tprice (มูลค่าเงิน)
             if(sortedItemsByVal.length > 0) {
-                // มูลค่าเบิกจ่ายสูงสุด (Card ตัวที่ 4)
                 document.getElementById('stat-w-maxvalue').innerText = fmtMoney(sortedItemsByVal[0][1]) + ' ฿';
                 document.getElementById('stat-w-maxvalue').title = sortedItemsByVal[0][0] + ` (${fmtMoney(sortedItemsByVal[0][1])} ฿)`;
-                
-                // รายการเบิกสูงสุด (Card ตัวที่ 5)
                 document.getElementById('stat-w-topitem').innerText = sortedItemsByVal[0][0];
                 document.getElementById('stat-w-topitem').title = sortedItemsByVal[0][0] + ` (${fmtMoney(sortedItemsByVal[0][1])} ฿)`;
             } else {
@@ -1350,46 +1219,41 @@
                 datasetsBar1 = uniqueYearsBar.map((year, i) => ({
                     label: year,
                     backgroundColor: colorsBar[i % colorsBar.length],
-                    data: sortedUnits.map(x => {
-                        return dataObj.filter(d => d.unit === x[0] && d.year === year).reduce((s, d)=>s+d.tprice, 0);
-                    }),
+                    data: sortedUnits.map(x => dataObj.filter(d => d.unit === x[0] && d.year === year).reduce((s, d)=>s+d.tprice, 0)),
                     borderRadius: 4
                 }));
             } else {
                 document.getElementById('chart-title-w-1').innerText = `แนวโน้มมูลค่าเบิกจ่าย: ${selUnit}`;
                 labelsBar1 = uniqueYearsBar;
                 datasetsBar1 = [{
-                    label: 'มูลค่า (บาท)',
-                    backgroundColor: '#8b5cf6',
-                    data: uniqueYearsBar.map(y => {
-                        return dataObj.filter(d => d.year === y).reduce((s, d)=>s+d.tprice, 0);
-                    }),
+                    label: 'มูลค่า (บาท)', backgroundColor: '#8b5cf6',
+                    data: uniqueYearsBar.map(y => dataObj.filter(d => d.year === y).reduce((s, d)=>s+d.tprice, 0)),
                     borderRadius: 4
                 }];
             }
 
             if(chartWBar) chartWBar.destroy();
             chartWBar = new Chart(document.getElementById('chartWithdrawBar'), {
-                type: 'bar',
-                data: {
-                    labels: labelsBar1,
-                    datasets: datasetsBar1
-                },
-                options: { 
-                    maintainAspectRatio: false, 
-                    plugins: { legend: { display: true, position: 'bottom' }, tooltip: { mode: 'index', intersect: false } }, 
-                    scales: { y: { grid: { color: '#e5e7eb' }, border: { dash: [4, 4] } }, x: { grid: { display: false } } } 
-                }
+                type: 'bar', data: { labels: labelsBar1, datasets: datasetsBar1 },
+                options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom' }, tooltip: { mode: 'index', intersect: false } }, scales: { y: { grid: { color: '#e5e7eb' }, border: { dash: [4, 4] } }, x: { grid: { display: false } } } }
             });
 
-            // Chart 2: ปรับกราฟให้เรียงตามอุปกรณ์ (มากไปน้อย) เมื่อเลือก 1 รพ.สต. และเลือกทุกอุปกรณ์
+            // Chart 2: ปรับปรุงการแสดงจำนวนตามเงื่อนไขใหม่
             let labelsStacked = [];
             let datasetsStacked = [];
 
-            if (selUnit !== 'all' && selItem === 'all') {
-                document.getElementById('titleChartWStacked').innerText = `สัดส่วนมูลค่าของ ${selUnit} (เรียงตามมูลค่าสูงสุด)`;
-                
-                // ใช้ X-Axis เป็นชื่ออุปกรณ์ และเรียงลำดับมูลค่ามากสุดมาไว้หน้าสุด
+            if (selUnit !== 'all' && selItem !== 'all') {
+                // เงื่อนไขใหม่: ดูราย รพ.สต. และระบุ Item -> ให้แสดงเป็นกราฟ จำนวน (ชิ้น)
+                document.getElementById('titleChartWStacked').innerText = `จำนวนที่เบิก (ชิ้น): ${selItem.length > 20 ? selItem.substring(0,20)+'...' : selItem}`;
+                labelsStacked = uniqueYearsBar;
+                datasetsStacked = [{
+                    label: 'จำนวน (ชิ้น)',
+                    backgroundColor: '#10b981', // สีเขียวบ่งบอกถึงจำนวนชิ้น
+                    data: uniqueYearsBar.map(y => dataObj.filter(d => d.year === y && d.unit === selUnit && d.item === selItem).reduce((s,d)=>s+d.qty, 0)),
+                    borderRadius: 4
+                }];
+            } else if (selUnit !== 'all' && selItem === 'all') {
+                document.getElementById('titleChartWStacked').innerText = `สัดส่วนมูลค่าของ ${selUnit} (เรียงตามสูงสุด)`;
                 labelsStacked = sortedItemsByVal.map(x => x[0].length > 20 ? x[0].substring(0,20) + '...' : x[0]);
                 datasetsStacked = [{
                     label: 'มูลค่า (บาท)',
@@ -1397,14 +1261,12 @@
                     data: sortedItemsByVal.map(x => x[1]),
                     borderRadius: 4
                 }];
-
             } else {
-                document.getElementById('titleChartWStacked').innerText = selUnit === 'all' ? 'สัดส่วนมูลค่า (แยกตามรายการที่เบิก)' : `สัดส่วนมูลค่าของ ${selUnit} (แยกตามรายการ)`;
+                document.getElementById('titleChartWStacked').innerText = selUnit === 'all' ? 'สัดส่วนมูลค่า (แยกตามรายการ)' : `สัดส่วนมูลค่าของ ${selUnit} (แยกตามรายการ)`;
                 labelsStacked = xAxisMode === 'unit' ? sortedUnits.map(x => x[0].length > 15 ? x[0].substring(0,15) + '...' : x[0]) : uniqueYearsBar;
                 
                 if (selItem === 'all') {
                     const topItems = sortedItemsByVal.slice(0, 5).map(x=>x[0]);
-                    
                     topItems.forEach((it, i) => {
                         datasetsStacked.push({
                             label: it.length > 20 ? it.substring(0,20)+'...' : it,
@@ -1418,8 +1280,7 @@
                     
                     if (sortedItemsByVal.length > 5) {
                         datasetsStacked.push({
-                            label: 'อื่นๆ',
-                            backgroundColor: '#cbd5e1',
+                            label: 'อื่นๆ', backgroundColor: '#cbd5e1',
                             data: labelsStacked.map((lbl, idx) => {
                                 const filterKey = xAxisMode === 'unit' ? sortedUnits[idx][0] : lbl;
                                 return dataObj.filter(d => (xAxisMode==='unit' ? d.unit === filterKey : d.year === filterKey) && !topItems.includes(d.item)).reduce((s,d)=>s+d.tprice, 0);
@@ -1440,22 +1301,20 @@
 
             if(chartWTypeBar) chartWTypeBar.destroy();
             chartWTypeBar = new Chart(document.getElementById('chartWithdrawTypeBar'), {
-                type: 'bar',
-                data: { labels: labelsStacked, datasets: datasetsStacked },
+                type: 'bar', data: { labels: labelsStacked, datasets: datasetsStacked },
                 options: { 
                     maintainAspectRatio: false, 
                     scales: { 
-                        // ยกเลิกโหมด stacked ถ้ารูปแบบเป็นการเรียงรายการทั่วไป
-                        x: { stacked: (selUnit !== 'all' && selItem === 'all') ? false : true, grid: { display: false } }, 
-                        y: { stacked: (selUnit !== 'all' && selItem === 'all') ? false : true, grid: { color: '#e5e7eb' }, border: { dash: [4, 4] } } 
+                        x: { stacked: (selUnit !== 'all' && selItem === 'all') || (selUnit !== 'all' && selItem !== 'all') ? false : true, grid: { display: false } }, 
+                        y: { stacked: (selUnit !== 'all' && selItem === 'all') || (selUnit !== 'all' && selItem !== 'all') ? false : true, grid: { color: '#e5e7eb' }, border: { dash: [4, 4] } } 
                     },
-                    plugins: { legend: { position: 'bottom', display: (selUnit !== 'all' && selItem === 'all') ? false : true }, tooltip: { mode: 'index', intersect: false } } 
+                    plugins: { legend: { position: 'bottom', display: (selUnit !== 'all' && selItem === 'all') || (selUnit !== 'all' && selItem !== 'all') ? false : true }, tooltip: { mode: 'index', intersect: false } } 
                 }
             });
         }
 
         // ==========================================
-        // DATA MANAGEMENT (TABLES)
+        // DATA MANAGEMENT
         // ==========================================
         function renderTable(type) {
             if(type === 'purchase') {
@@ -1470,7 +1329,6 @@
                         <td class="p-3 text-gray-600">${isNaN(d.month) ? d.month : getMonthName(d.month)} ${d.cal_year ? d.cal_year : ''}</td>
                         <td class="p-3"><span class="px-2 py-1 bg-gray-100 rounded text-xs text-gray-600 border border-gray-300">${d.type}</span></td>
                         <td class="p-3 font-medium text-blue-600 text-right">${fmtMoney(d.amount)}</td>`;
-                    
                     if(currentUserRole === 'admin') {
                         html += `<td class="p-3 text-center">
                             <button onclick='editRecord("purchase", ${JSON.stringify(d)})' class="text-yellow-600 hover:text-yellow-700 mx-1 bg-yellow-100 p-1.5 rounded"><i class="fas fa-edit"></i></button>
@@ -1492,7 +1350,6 @@
                         <td class="p-3 text-right">${fmtQty(d.qty)}</td>
                         <td class="p-3 text-right text-gray-500">${fmtMoney(d.uprice)}</td>
                         <td class="p-3 text-right font-bold text-purple-600">${fmtMoney(d.tprice)}</td>`;
-                    
                     if(currentUserRole === 'admin') {
                         html += `<td class="p-3 text-center">
                             <button onclick='editRecord("withdraw", ${JSON.stringify(d)})' class="text-yellow-600 hover:text-yellow-700 mx-1 bg-yellow-100 p-1.5 rounded"><i class="fas fa-edit"></i></button>
@@ -1505,9 +1362,6 @@
             }
         }
 
-        // ==========================================
-        // FORMS & MODALS (SUPABASE)
-        // ==========================================
         function calcTotal() {
             const qty = parseFloat(document.getElementById('w-qty').value) || 0;
             const price = parseFloat(document.getElementById('w-uprice').value) || 0;
@@ -1588,19 +1442,11 @@
             }
 
             try {
-                if (idx) { 
-                    const { error } = await supabaseClient.from(tableName).update(rowData).eq('id', idx);
-                    if (error) throw error;
-                    showToast('บันทึกข้อมูลสำเร็จ');
-                } else { 
-                    const { error } = await supabaseClient.from(tableName).insert([rowData]);
-                    if (error) throw error;
-                    showToast('บันทึกข้อมูลสำเร็จ');
-                }
-                // ส่งค่า true ไปเพื่อระงับ Toast "เชื่อมต่อสำเร็จ..." ที่จะมาทับซ้อนข้อความ "บันทึกข้อมูลสำเร็จ"
+                if (idx) { await supabaseClient.from(tableName).update(rowData).eq('id', idx); } 
+                else { await supabaseClient.from(tableName).insert([rowData]); }
+                showToast('บันทึกข้อมูลสำเร็จ');
                 loadAllData(true);
             } catch (error) {
-                console.error(error);
                 showToast('เกิดข้อผิดพลาดในการบันทึกข้อมูล', 'error');
                 document.getElementById('loading').classList.add('hidden');
             }
@@ -1618,21 +1464,18 @@
             document.getElementById('loading').classList.remove('hidden');
             
             const tableName = deleteTarget.type === 'purchase' ? 'purchase' : 'withdraw';
-            
             try {
-                const { error } = await supabaseClient.from(tableName).delete().eq('id', deleteTarget.idx);
-                if (error) throw error;
+                await supabaseClient.from(tableName).delete().eq('id', deleteTarget.idx);
                 showToast('ลบข้อมูลสำเร็จ');
-                loadAllData(true); // ปิดเสียงเตือนซ้ำเหมือนกัน
+                loadAllData(true);
             } catch (error) {
-                console.error(error);
                 showToast('เกิดข้อผิดพลาดในการลบข้อมูล', 'error');
                 document.getElementById('loading').classList.add('hidden');
             }
         });
 
         // ==========================================
-        // REPORTS & PRINTING
+        // REPORTS
         // ==========================================
         function toggleReportPurchaseFilter() {
             const type = document.querySelector('input[name="rp_filter_type"]:checked').value;
@@ -1667,116 +1510,61 @@
                     const mFrom = document.getElementById('filter-rp-m-from').value;
                     const yTo = document.getElementById('filter-rp-y-to').value;
                     const mTo = document.getElementById('filter-rp-m-to').value;
-
                     if(yFrom && mFrom && yTo && mTo) {
                         const fromVal = parseInt(yFrom) * 100 + parseInt(mFrom);
                         const toVal = parseInt(yTo) * 100 + parseInt(mTo);
                         filtered = filtered.filter(d => {
-                            const dMonth = parseInt(d.month);
-                            const dCalYear = parseInt(d.cal_year);
-                            if(isNaN(dMonth) || isNaN(dCalYear)) return false; 
-                            const dVal = dCalYear * 100 + dMonth;
-                            return dVal >= fromVal && dVal <= toVal;
+                            const dVal = parseInt(d.cal_year) * 100 + parseInt(d.month);
+                            return !isNaN(dVal) && dVal >= fromVal && dVal <= toVal;
                         });
                     }
                 }
 
-                if(filtered.length === 0) {
-                    container.innerHTML = '<div class="text-center p-10 text-gray-500">ไม่พบข้อมูลตามเงื่อนไขที่ค้นหา</div>';
-                    return;
-                }
+                if(filtered.length === 0) { container.innerHTML = '<div class="text-center p-10 text-gray-500">ไม่พบข้อมูล</div>'; return; }
 
                 const years = [...new Set(filtered.map(d=>d.year))].sort();
                 const types = [...new Set(filtered.map(d=>d.type))].filter(Boolean).sort();
 
-                html += `<div class="bg-white text-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 overflow-x-auto">
-                            <table class="w-full text-sm mb-4 border-collapse border border-gray-300 whitespace-nowrap">
-                                <thead>
-                                    <tr class="bg-gray-200 text-gray-800">
-                                        <th rowspan="2" class="border border-gray-300 p-2 text-center align-middle font-bold">บริษัท</th>`;
-                years.forEach(y => {
-                    html += `<th colspan="${types.length + 1}" class="border border-gray-300 p-2 text-center align-middle font-bold">ปีงบประมาณ ${y}</th>`;
-                });
-                html += `<th rowspan="2" class="border border-gray-300 p-2 text-center align-middle font-bold">รวมสุทธิ<br>(บาท)</th>
-                                    </tr>
-                                    <tr class="bg-gray-100 text-gray-700">`;
-                years.forEach(y => {
-                    types.forEach(t => {
-                        html += `<th class="border border-gray-300 p-2 text-center font-semibold text-xs">${t}</th>`;
-                    });
-                    html += `<th class="border border-gray-300 p-2 text-center font-bold text-xs text-blue-800">รวมปี ${y}</th>`;
-                });
-                html += `           </tr>
-                                </thead>
-                                <tbody>`;
+                html += `<div class="bg-white text-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 overflow-x-auto"><table class="w-full text-sm mb-4 border-collapse border border-gray-300 whitespace-nowrap"><thead><tr class="bg-gray-200 text-gray-800"><th rowspan="2" class="border border-gray-300 p-2 text-center align-middle font-bold">บริษัท</th>`;
+                years.forEach(y => html += `<th colspan="${types.length + 1}" class="border border-gray-300 p-2 text-center align-middle font-bold">ปีงบประมาณ ${y}</th>`);
+                html += `<th rowspan="2" class="border border-gray-300 p-2 text-center align-middle font-bold">รวมสุทธิ<br>(บาท)</th></tr><tr class="bg-gray-100 text-gray-700">`;
+                years.forEach(y => { types.forEach(t => html += `<th class="border border-gray-300 p-2 text-center font-semibold text-xs">${t}</th>`); html += `<th class="border border-gray-300 p-2 text-center font-bold text-xs text-blue-800">รวมปี ${y}</th>`; });
+                html += `</tr></thead><tbody>`;
 
-                let grouped = {};
-                let yearGrandTotals = {};
-                
-                years.forEach(y => {
-                    yearGrandTotals[y] = { total: 0 };
-                    types.forEach(t => yearGrandTotals[y][t] = 0);
-                });
+                let grouped = {}, yearGrandTotals = {};
+                years.forEach(y => { yearGrandTotals[y] = { total: 0 }; types.forEach(t => yearGrandTotals[y][t] = 0); });
                 let absoluteTotal = 0;
 
                 filtered.forEach(d => {
                     if(!grouped[d.company]) grouped[d.company] = {};
-                    if(!grouped[d.company][d.year]) {
-                        grouped[d.company][d.year] = { total: 0 };
-                        types.forEach(t => grouped[d.company][d.year][t] = 0);
-                    }
-                    if(grouped[d.company][d.year][d.type] !== undefined) {
-                        grouped[d.company][d.year][d.type] += d.amount;
-                    } else {
-                        grouped[d.company][d.year][d.type] = d.amount;
-                    }
+                    if(!grouped[d.company][d.year]) { grouped[d.company][d.year] = { total: 0 }; types.forEach(t => grouped[d.company][d.year][t] = 0); }
+                    grouped[d.company][d.year][d.type] = (grouped[d.company][d.year][d.type] || 0) + d.amount;
                     grouped[d.company][d.year].total += d.amount;
                 });
 
-                const sortedComps = Object.keys(grouped).sort();
-
-                sortedComps.forEach(comp => {
-                    html += `<tr>
-                                <td class="border border-gray-300 p-2 text-left font-medium text-gray-800 bg-white">${comp}</td>`;
-                    
+                Object.keys(grouped).sort().forEach(comp => {
+                    html += `<tr><td class="border border-gray-300 p-2 text-left font-medium text-gray-800 bg-white">${comp}</td>`;
                     let compTotal = 0;
                     years.forEach(y => {
                         let yearData = grouped[comp][y];
                         if (yearData) {
-                            types.forEach(t => {
-                                let amt = yearData[t] || 0;
-                                yearGrandTotals[y][t] += amt;
-                                html += `<td class="border border-gray-300 p-2 text-right">${amt === 0 ? '-' : fmtMoney(amt)}</td>`;
-                            });
-                            let yTotal = yearData.total || 0;
-                            compTotal += yTotal;
-                            yearGrandTotals[y].total += yTotal;
+                            types.forEach(t => { let amt = yearData[t] || 0; yearGrandTotals[y][t] += amt; html += `<td class="border border-gray-300 p-2 text-right">${amt === 0 ? '-' : fmtMoney(amt)}</td>`; });
+                            let yTotal = yearData.total || 0; compTotal += yTotal; yearGrandTotals[y].total += yTotal;
                             html += `<td class="border border-gray-300 p-2 text-right font-bold text-blue-700 bg-blue-50/50">${yTotal === 0 ? '-' : fmtMoney(yTotal)}</td>`;
                         } else {
-                            types.forEach(t => { html += `<td class="border border-gray-300 p-2 text-right">-</td>`; });
-                            html += `<td class="border border-gray-300 p-2 text-right font-bold text-blue-700 bg-blue-50/50">-</td>`;
+                            types.forEach(t => html += `<td class="border border-gray-300 p-2 text-right">-</td>`); html += `<td class="border border-gray-300 p-2 text-right font-bold text-blue-700 bg-blue-50/50">-</td>`;
                         }
                     });
                     absoluteTotal += compTotal;
-                    
-                    html += `<td class="border border-gray-300 p-2 text-right font-bold text-blue-800 bg-blue-100/50">${fmtMoney(compTotal)}</td>
-                            </tr>`;
+                    html += `<td class="border border-gray-300 p-2 text-right font-bold text-blue-800 bg-blue-100/50">${fmtMoney(compTotal)}</td></tr>`;
                 });
 
-                html += `<tr class="bg-blue-100 text-blue-900 font-bold text-base">
-                            <td class="border border-gray-300 p-2 text-right">รวมสุทธิ (ตามที่ค้นหา)</td>`;
+                html += `<tr class="bg-blue-100 text-blue-900 font-bold text-base"><td class="border border-gray-300 p-2 text-right">รวมสุทธิ</td>`;
                 years.forEach(y => {
-                    types.forEach(t => {
-                        let tTotal = yearGrandTotals[y][t];
-                        html += `<td class="border border-gray-300 p-2 text-right">${tTotal === 0 ? '-' : fmtMoney(tTotal)}</td>`;
-                    });
-                    let yTotal = yearGrandTotals[y].total;
-                    html += `<td class="border border-gray-300 p-2 text-right text-blue-800 bg-blue-200/50">${yTotal === 0 ? '-' : fmtMoney(yTotal)}</td>`;
+                    types.forEach(t => html += `<td class="border border-gray-300 p-2 text-right">${yearGrandTotals[y][t] === 0 ? '-' : fmtMoney(yearGrandTotals[y][t])}</td>`);
+                    html += `<td class="border border-gray-300 p-2 text-right text-blue-800 bg-blue-200/50">${yearGrandTotals[y].total === 0 ? '-' : fmtMoney(yearGrandTotals[y].total)}</td>`;
                 });
-                html += `<td class="border border-gray-300 p-2 text-right text-blue-900 bg-blue-300/50">${fmtMoney(absoluteTotal)}</td>
-                        </tr>`;
-
-                html += `</tbody></table></div>`;
+                html += `<td class="border border-gray-300 p-2 text-right text-blue-900 bg-blue-300/50">${fmtMoney(absoluteTotal)}</td></tr></tbody></table></div>`;
 
             } else {
                 const search = document.getElementById('searchReportWithdraw').value.toLowerCase().trim();
@@ -1793,155 +1581,84 @@
                     const mFrom = document.getElementById('filter-rw-m-from').value;
                     const yTo = document.getElementById('filter-rw-y-to').value;
                     const mTo = document.getElementById('filter-rw-m-to').value;
-
                     if(yFrom && mFrom && yTo && mTo) {
                         const fromVal = parseInt(yFrom) * 100 + parseInt(mFrom);
                         const toVal = parseInt(yTo) * 100 + parseInt(mTo);
                         filtered = filtered.filter(d => {
-                            const dMonth = parseInt(d.month);
-                            const dCalYear = parseInt(d.cal_year);
-                            if(isNaN(dMonth) || isNaN(dCalYear)) return false; 
-                            const dVal = dCalYear * 100 + dMonth;
-                            return dVal >= fromVal && dVal <= toVal;
+                            const dVal = parseInt(d.cal_year) * 100 + parseInt(d.month);
+                            return !isNaN(dVal) && dVal >= fromVal && dVal <= toVal;
                         });
                     }
                 }
 
-                if(filtered.length === 0) {
-                    container.innerHTML = '<div class="text-center p-10 text-gray-500">ไม่พบข้อมูล</div>';
-                    return;
-                }
+                if(filtered.length === 0) { container.innerHTML = '<div class="text-center p-10 text-gray-500">ไม่พบข้อมูล</div>'; return; }
 
                 const years = [...new Set(filtered.map(d=>d.year))].sort();
 
-                html += `<div class="bg-white text-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 overflow-x-auto">
-                            <table class="w-full text-sm mb-4 border-collapse border border-gray-300 whitespace-nowrap">
-                                <thead>
-                                    <tr class="bg-gray-200 text-gray-800">
-                                        <th rowspan="2" class="border border-gray-300 p-2 text-center align-middle font-bold">หน่วยงาน (รพ.สต.)</th>
-                                        <th rowspan="2" class="border border-gray-300 p-2 text-center align-middle font-bold">รายการอุปกรณ์</th>`;
-                years.forEach(y => {
-                    html += `<th colspan="2" class="border border-gray-300 p-2 text-center font-bold">ปีงบประมาณ ${y}</th>`;
-                });
-                html += `<th rowspan="2" class="border border-gray-300 p-2 text-center align-middle font-bold">รวมสุทธิ<br>(บาท)</th>
-                                    </tr>
-                                    <tr class="bg-gray-100 text-gray-700">`;
-                years.forEach(y => {
-                    html += `<th class="border border-gray-300 p-2 text-center font-semibold text-xs">จำนวน (ชิ้น)</th>
-                             <th class="border border-gray-300 p-2 text-center font-semibold text-xs">มูลค่า (บาท)</th>`;
-                });
-                html += `           </tr>
-                                </thead>
-                                <tbody>`;
+                html += `<div class="bg-white text-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 overflow-x-auto"><table class="w-full text-sm mb-4 border-collapse border border-gray-300 whitespace-nowrap"><thead><tr class="bg-gray-200 text-gray-800"><th rowspan="2" class="border border-gray-300 p-2 text-center align-middle font-bold">หน่วยงาน</th><th rowspan="2" class="border border-gray-300 p-2 text-center align-middle font-bold">รายการอุปกรณ์</th>`;
+                years.forEach(y => html += `<th colspan="2" class="border border-gray-300 p-2 text-center font-bold">ปีงบประมาณ ${y}</th>`);
+                html += `<th rowspan="2" class="border border-gray-300 p-2 text-center align-middle font-bold">รวมสุทธิ<br>(บาท)</th></tr><tr class="bg-gray-100 text-gray-700">`;
+                years.forEach(y => html += `<th class="border border-gray-300 p-2 text-center font-semibold text-xs">จำนวน (ชิ้น)</th><th class="border border-gray-300 p-2 text-center font-semibold text-xs">มูลค่า (บาท)</th>`);
+                html += `</tr></thead><tbody>`;
 
-                let grouped = {};
-                let unitTotalsByYear = {};
-
+                let grouped = {}, unitTotalsByYear = {};
                 filtered.forEach(d => {
                     if(!grouped[d.unit]) grouped[d.unit] = {};
                     if(!grouped[d.unit][d.item]) grouped[d.unit][d.item] = {};
                     if(!grouped[d.unit][d.item][d.year]) grouped[d.unit][d.item][d.year] = { qty:0, total:0 };
-                    
-                    grouped[d.unit][d.item][d.year].qty += d.qty;
-                    grouped[d.unit][d.item][d.year].total += d.tprice;
-
+                    grouped[d.unit][d.item][d.year].qty += d.qty; grouped[d.unit][d.item][d.year].total += d.tprice;
                     if(!unitTotalsByYear[d.unit]) unitTotalsByYear[d.unit] = {};
                     if(!unitTotalsByYear[d.unit][d.year]) unitTotalsByYear[d.unit][d.year] = {qty:0, total:0};
-                    unitTotalsByYear[d.unit][d.year].qty += d.qty;
-                    unitTotalsByYear[d.unit][d.year].total += d.tprice;
+                    unitTotalsByYear[d.unit][d.year].qty += d.qty; unitTotalsByYear[d.unit][d.year].total += d.tprice;
                 });
 
-                let grandTotals = {};
-                years.forEach(y => {
-                    grandTotals[y] = { qty:0, total:0 };
-                });
+                let grandTotals = {}; years.forEach(y => grandTotals[y] = { qty:0, total:0 });
                 let absoluteTotal = 0;
 
-                const sortedUnits = Object.keys(grouped).sort();
-
-                sortedUnits.forEach(unit => {
+                Object.keys(grouped).sort().forEach(unit => {
                     const sortedItems = Object.keys(grouped[unit]).sort();
-                    
                     sortedItems.forEach((item, index) => {
                         let rowHtml = `<tr>`;
-                        if (index === 0) {
-                            rowHtml += `<td rowspan="${sortedItems.length}" class="border border-gray-300 p-2 text-left font-medium text-gray-800 align-top bg-white">${unit}</td>`;
-                        }
+                        if (index === 0) rowHtml += `<td rowspan="${sortedItems.length}" class="border border-gray-300 p-2 text-left font-medium text-gray-800 align-top bg-white">${unit}</td>`;
                         rowHtml += `<td class="border border-gray-300 p-2 text-left text-gray-600">${item}</td>`;
-                        
                         let itemRowTotal = 0;
                         years.forEach(y => {
-                            let q = (grouped[unit][item][y]) ? grouped[unit][item][y].qty : 0;
-                            let t = (grouped[unit][item][y]) ? grouped[unit][item][y].total : 0;
-                            
+                            let q = grouped[unit][item][y] ? grouped[unit][item][y].qty : 0;
+                            let t = grouped[unit][item][y] ? grouped[unit][item][y].total : 0;
                             itemRowTotal += t;
-                            
-                            rowHtml += `<td class="border border-gray-300 p-2 text-right">${q === 0 ? '-' : fmtQty(q)}</td>
-                                        <td class="border border-gray-300 p-2 text-right">${t === 0 ? '-' : fmtMoney(t)}</td>`;
+                            rowHtml += `<td class="border border-gray-300 p-2 text-right">${q === 0 ? '-' : fmtQty(q)}</td><td class="border border-gray-300 p-2 text-right">${t === 0 ? '-' : fmtMoney(t)}</td>`;
                         });
                         rowHtml += `<td class="border border-gray-300 p-2 text-right font-bold text-gray-700 bg-gray-50">${fmtMoney(itemRowTotal)}</td></tr>`;
                         html += rowHtml;
                     });
                     
-                    html += `<tr class="bg-blue-50 font-bold">
-                                <td colspan="2" class="border border-gray-300 p-2 text-right text-blue-800">รวม ${unit}</td>`;
+                    html += `<tr class="bg-blue-50 font-bold"><td colspan="2" class="border border-gray-300 p-2 text-right text-blue-800">รวม ${unit}</td>`;
                     let unitAbsoluteTotal = 0;
                     years.forEach(y => {
-                        let q = (unitTotalsByYear[unit][y]) ? unitTotalsByYear[unit][y].qty : 0;
-                        let t = (unitTotalsByYear[unit][y]) ? unitTotalsByYear[unit][y].total : 0;
-                        
-                        unitAbsoluteTotal += t;
-                        grandTotals[y].qty += q;
-                        grandTotals[y].total += t;
-                        
-                        html += `<td class="border border-gray-300 p-2 text-right text-blue-700">${q === 0 ? '-' : fmtQty(q)}</td>
-                                 <td class="border border-gray-300 p-2 text-right text-blue-700">${t === 0 ? '-' : fmtMoney(t)}</td>`;
+                        let q = unitTotalsByYear[unit][y] ? unitTotalsByYear[unit][y].qty : 0;
+                        let t = unitTotalsByYear[unit][y] ? unitTotalsByYear[unit][y].total : 0;
+                        unitAbsoluteTotal += t; grandTotals[y].qty += q; grandTotals[y].total += t;
+                        html += `<td class="border border-gray-300 p-2 text-right text-blue-700">${q === 0 ? '-' : fmtQty(q)}</td><td class="border border-gray-300 p-2 text-right text-blue-700">${t === 0 ? '-' : fmtMoney(t)}</td>`;
                     });
                     absoluteTotal += unitAbsoluteTotal;
                     html += `<td class="border border-gray-300 p-2 text-right text-blue-800 bg-blue-100/50">${fmtMoney(unitAbsoluteTotal)}</td></tr>`;
                 });
 
-                html += `<tr class="bg-purple-100 text-purple-900 font-bold text-base">
-                            <td colspan="2" class="border border-gray-300 p-2 text-right">รวมทั้งสิ้นทุกหน่วยงาน</td>`;
-                years.forEach(y => {
-                    html += `<td class="border border-gray-300 p-2 text-right">${grandTotals[y].qty === 0 ? '-' : fmtQty(grandTotals[y].qty)}</td>
-                             <td class="border border-gray-300 p-2 text-right">${grandTotals[y].total === 0 ? '-' : fmtMoney(grandTotals[y].total)}</td>`;
-                });
-                html += `<td class="border border-gray-300 p-2 text-right text-purple-800">${fmtMoney(absoluteTotal)}</td></tr>`;
-
-                html += `</tbody></table></div>`;
+                html += `<tr class="bg-purple-100 text-purple-900 font-bold text-base"><td colspan="2" class="border border-gray-300 p-2 text-right">รวมทั้งสิ้น</td>`;
+                years.forEach(y => html += `<td class="border border-gray-300 p-2 text-right">${grandTotals[y].qty === 0 ? '-' : fmtQty(grandTotals[y].qty)}</td><td class="border border-gray-300 p-2 text-right">${grandTotals[y].total === 0 ? '-' : fmtMoney(grandTotals[y].total)}</td>`);
+                html += `<td class="border border-gray-300 p-2 text-right text-purple-800">${fmtMoney(absoluteTotal)}</td></tr></tbody></table></div>`;
             }
 
             container.innerHTML = html;
         }
 
-        // ==========================================
-        // PRINT REPORT
-        // ==========================================
         function printReport(type) {
             const content = document.getElementById(`report-container-${type}`).innerHTML;
             const title = type === 'purchase' ? 'รายงานสรุป — จัดซื้อรายบริษัท' : 'รายงานสรุปการเบิก-จ่าย โรงพยาบาลกมลาไสย';
-            
             let printArea = document.getElementById('print-area');
-            if (!printArea) {
-                printArea = document.createElement('div');
-                printArea.id = 'print-area';
-                document.body.appendChild(printArea);
-            }
-            
-            printArea.innerHTML = `
-                <div style="padding-top: 10px; padding-bottom: 20px;">
-                    <h2 style="text-align: center; font-size: 20pt; font-weight: bold; margin-bottom: 20px; color: black;">${title}</h2>
-                    ${content}
-                </div>
-            `;
-            
-            setTimeout(() => {
-                window.print();
-                setTimeout(() => {
-                    printArea.innerHTML = '';
-                }, 1000);
-            }, 300);
+            if (!printArea) { printArea = document.createElement('div'); printArea.id = 'print-area'; document.body.appendChild(printArea); }
+            printArea.innerHTML = `<div style="padding-top: 10px; padding-bottom: 20px;"><h2 style="text-align: center; font-size: 20pt; font-weight: bold; margin-bottom: 20px; color: black;">${title}</h2>${content}</div>`;
+            setTimeout(() => { window.print(); setTimeout(() => { printArea.innerHTML = ''; }, 1000); }, 300);
         }
     </script>
 </body>
